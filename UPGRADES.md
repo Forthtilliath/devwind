@@ -42,12 +42,15 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 - ~~Sélecteur de côté en texte brut~~ — icônes SVG 14×14 (carré plein/côté/coin en surbrillance) pour tous les préfixes multiples (padding/margin/gap/border/rounded/scale/translate/skew), texte en secours pour un préfixe non cartographié.
 - ~~Pas d'indicateur de classe non synthétisée~~ — badge ⚠ sur le chip concerné (avec tooltip explicatif) quand `live-style` ne peut pas synthétiser d'effet visuel (variant non géré) ; se nettoie automatiquement si la classe est retirée/remplacée.
 - ~~Export limité à "copier les classes"~~ — menu Copier avec un second format JSX (`className="…"`).
+- ~~Rail de catégories trop étroit, largeur fixe~~ — redimensionnable par glisser-déposer (poignée entre le rail et le contenu, bornée 72–220px, double-clic pour réinitialiser), largeur mémorisée dans `chrome.storage.local`. Largeur par défaut relevée à 150px (mesurée pour que le plus long libellé, "Transitions & Transforms", tienne sur une ligne).
+- ~~Libellés de catégorie/sous-catégorie mélangeant français et anglais~~ (`taxonomy.ts` avait été rempli sans convention unique, ex. `Largeur`/`Width`, `Taille`/`Height`) — sélecteur FR/EN dans l'en-tête (`devwind-lang-btn`), persisté. Traductions dans `devpanel/i18n.ts`, une table séparée qui habille l'affichage sans toucher à `taxonomy.ts` (qui reste la clé de regroupement, peu importe sa langue d'origine).
 
 ## Picker / sélection d'élément — ✅ fait
 
 - ~~Pas de breadcrumb DOM~~ — fil d'ariane des ancêtres (parent direct → `<body>`, plafonné à 8 niveaux) dans le devpanel, cliquable pour remonter sans re-cliquer sur la page.
 - ~~Pas de navigation clavier~~ — flèches (`↑` parent, `↓` premier enfant, `←`/`→` frères) dans le devpanel, désactivées si le focus est dans un champ texte.
-- ~~Pas de mode "verrouiller la sélection"~~ — bouton 🔒/🔓 dans l'en-tête : suspend le picking (survol/clic sur la page ignorés, interactions normales possibles) sans perdre la sélection courante ; celle-ci reste modifiable via le fil d'ariane / le clavier pendant le verrouillage.
+- ~~Pas de mode "verrouiller la sélection"~~ — bouton 🔒/🔓 dans l'en-tête : suspend le picking (survol/clic sur la page ignorés, interactions normales possibles) sans perdre la sélection courante ; celle-ci reste modifiable via le fil d'ariane / le clavier pendant le verrouillage. Verrouillable aussi directement depuis la page : `Échap` pendant le picking verrouille la sélection courante (icône du panneau synchronisée via un nouveau message `LOCKED_CHANGED`), pratique pour interagir avec la page sans repasser par la fenêtre du panneau.
+- ~~Détection de préfixe de site : faux positif sur `after:`/`before:`~~ — ces variants (et une bonne partie des pseudo-classes/pseudo-éléments standards Tailwind : `checked`, `placeholder`, `marker`, `selection`, `not-*`...) manquaient à la liste des variants connus de `detectSitePrefix`, donc un site les utilisant ≥3 fois se voyait attribuer à tort un "préfixe" `after:`/`before:`. Liste étendue.
 
 ## Scan CSS — ✅ fait
 
