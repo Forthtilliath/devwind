@@ -1,6 +1,6 @@
 import { taxonomy } from '../data/taxonomy'
-import generatedClasses from '../data/generated/tailwind-classes.json'
-import type { GeneratedClass, ParsedClass, TaxonomyEntry } from '../types'
+import generatedClasses from '../data/generated/tailwind-classes-slim.json'
+import type { ParsedClass, SlimGeneratedClass, TaxonomyEntry } from '../types'
 
 /**
  * Classes réellement générées (cf. scripts/generate-tailwind-data.ts), regroupées par entrée
@@ -11,7 +11,7 @@ import type { GeneratedClass, ParsedClass, TaxonomyEntry } from '../types'
  * tort un candidat textColor également (les deux entrées partagent le préfixe `text`).
  */
 const VALID_CLASS_NAMES_BY_ENTRY = new Map<string, Set<string>>()
-for (const c of generatedClasses as GeneratedClass[]) {
+for (const c of generatedClasses as SlimGeneratedClass[]) {
   const set = VALID_CLASS_NAMES_BY_ENTRY.get(c.taxonomyId) ?? new Set<string>()
   set.add(c.className)
   VALID_CLASS_NAMES_BY_ENTRY.set(c.taxonomyId, set)

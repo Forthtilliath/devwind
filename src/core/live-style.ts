@@ -1,10 +1,10 @@
 import { taxonomy } from '../data/taxonomy'
-import generatedClasses from '../data/generated/tailwind-classes.json'
+import generatedClasses from '../data/generated/tailwind-classes-slim.json'
 import { hasRuleForClass } from './css-scanner'
-import type { GeneratedClass, LiveRuleStatus, TaxonomyEntry } from '../types'
+import type { LiveRuleStatus, SlimGeneratedClass, TaxonomyEntry } from '../types'
 
-const GENERATED_BY_CLASSNAME = new Map<string, GeneratedClass>()
-for (const c of generatedClasses as GeneratedClass[]) GENERATED_BY_CLASSNAME.set(c.className, c)
+const GENERATED_BY_CLASSNAME = new Map<string, SlimGeneratedClass>()
+for (const c of generatedClasses as SlimGeneratedClass[]) GENERATED_BY_CLASSNAME.set(c.className, c)
 
 const STYLE_ELEMENT_ID = 'devwind-live-styles'
 
@@ -94,7 +94,7 @@ function extractSuffix(classNameWithSign: string, prefix: string, negative: bool
 
 /** Calcule la valeur CSS d'une classe générée (hors modificateur d'opacité, géré à part) :
  * multiplicateur spacing, variable de thème nommée avec fallback, ou littéral bundlé tel quel. */
-function computeValue(entry: TaxonomyEntry, generated: GeneratedClass, suffix: string): string {
+function computeValue(entry: TaxonomyEntry, generated: SlimGeneratedClass, suffix: string): string {
   const literal = generated.negative ? `-${generated.themeToken}` : (generated.themeToken as string)
   if (SPACING_MULTIPLIED.has(entry.id)) {
     return spacingCalc(suffix, generated.negative) ?? literal

@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 // sont bien présents à côté du .mjs ; le typage manuel ci-dessous suffit de toute façon.
 import rawDefaultTheme from 'tailwindcss/defaultTheme'
 import { taxonomy } from '../src/data/taxonomy'
-import type { GeneratedClass, TaxonomyEntry } from '../src/types'
+import type { GeneratedClass, SlimGeneratedClass, TaxonomyEntry } from '../src/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -156,7 +156,24 @@ const generated: GeneratedClass[] = taxonomy.flatMap(entriesForTaxonomy)
 
 const outDir = path.resolve(__dirname, '../src/data/generated')
 fs.mkdirSync(outDir, { recursive: true })
+
 const outFile = path.join(outDir, 'tailwind-classes.json')
 fs.writeFileSync(outFile, JSON.stringify(generated, null, 2))
 
-console.log(`[generate-tailwind-data] ${generated.length} classes générées -> ${path.relative(process.cwd(), outFile)}`)
+// Version allégée pour le content script (class-parser.ts, live-style.ts) : `category`/
+// `subcategory` ne servent qu'à l'affichage/regroupement dans le devpanel (src/devpanel/data.ts,
+// PropertyRow.tsx...), jamais à la reconnaissance ou à la synthèse de classes — inutile de les
+// embarquer dans le bundle injecté sur chaque page (~22% de réduction sur ce fichier).
+const slim: SlimGeneratedClass[] = generated.map(({ className, taxonomyId, prefix, themeKey, themeToken, secondaryValue, negative }) => ({
+  className,
+  taxonomyId,
+  prefix,
+  themeKey,
+  themeToken,
+  secondaryValue,
+  negative,
+}))
+const slimOutFile = path.join(outDir, 'tailwind-classes-slim.json')
+fs.writeFileSync(slimOutFile, JSON.stringify(slim))
+
+console.log(`[generate-tailwind-data] ${generated.length} classes générées -> ${path.relative(process.cwd(), outFile)} (+ version allégée pour le content script)`)
