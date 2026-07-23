@@ -49,7 +49,7 @@ export interface ClassMatch {
 }
 
 function toClassName(prefix: string, suffix: string, isNegative: boolean): string {
-  const base = prefix === '' ? suffix : `${prefix}-${suffix}`
+  const base = prefix === '' ? suffix : suffix === '' ? prefix : `${prefix}-${suffix}`
   return isNegative ? `-${base}` : base
 }
 
@@ -84,15 +84,30 @@ export function matchTaxonomy(base: string, entries: TaxonomyEntry[] = taxonomy)
     if (isNegative && !entry.supportsNegative) continue
     for (const prefix of entry.prefixes) {
       if (prefix === '') continue
+
+      // Forme nue (clé de thème `DEFAULT`, ex. `rounded`/`shadow`/`border`/`ring`) : la classe
+      // est le préfixe seul, sans tiret-suffixe.
+      if (!isNegative && working === prefix) {
+        const validNames = VALID_CLASS_NAMES_BY_ENTRY.get(entry.id)
+        if (validNames?.has(toClassName(prefix, '', false))) {
+          return { entry, prefix, suffix: '', isArbitrary: false, isNegative: false }
+        }
+      }
+
       const dashPrefix = `${prefix}-`
       if (!working.startsWith(dashPrefix)) continue
       const suffix = working.slice(dashPrefix.length)
       if (!suffix) continue
 
-      const arbitraryMatch = /^\[(.+)\]$/.exec(suffix)
+      // Le `/NN` optionnel gère les valeurs arbitraires avec modificateur d'opacité
+      // (`bg-[#ff0000]/50`) : sans lui, ce candidat ne matcherait aucune entrée (le dataset
+      // généré ne contient que les classes sans opacité) et class-diff ne retirerait jamais
+      // l'ancienne classe arbitraire au profit de la nouvelle (pas le même "slot").
+      const arbitraryMatch = /^\[(.+)\](?:\/(\d{1,3}))?$/.exec(suffix)
       if (arbitraryMatch) {
         if (!entry.supportsArbitrary) continue
-        return { entry, prefix, suffix: arbitraryMatch[1], isArbitrary: true, isNegative }
+        const fullSuffix = arbitraryMatch[1] + (arbitraryMatch[2] ? `/${arbitraryMatch[2]}` : '')
+        return { entry, prefix, suffix: fullSuffix, isArbitrary: true, isNegative }
       }
 
       const validNames = VALID_CLASS_NAMES_BY_ENTRY.get(entry.id)
