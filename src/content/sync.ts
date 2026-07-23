@@ -1,5 +1,6 @@
 import { addRawClass, applyClassChange, removeRawClass } from '../core/class-diff'
 import { scanCustomClasses } from '../core/css-scanner'
+import { ensureLiveRule } from '../core/live-style'
 import { DEVWIND_SYNC_PORT } from '../types'
 import type { SyncFromContent, SyncFromPanel } from '../types'
 
@@ -21,6 +22,9 @@ function handlePanelMessage(message: SyncFromPanel) {
   switch (message.type) {
     case 'APPLY_CHANGE': {
       if (!selectedEl) return
+      if (message.request.newBase) {
+        ensureLiveRule([...message.request.variants, message.request.newBase].join(':'))
+      }
       applyClassChange(selectedEl, message.request)
       send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl) })
       return

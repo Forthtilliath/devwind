@@ -80,3 +80,32 @@ export function scanCustomClasses(doc: Document = document): CssScanResult {
 
   return { found, unscannable }
 }
+
+function ruleListHasClass(rules: CSSRuleList, target: string): boolean {
+  for (const rule of Array.from(rules)) {
+    if (isRuleWithSelector(rule) && extractClassSelectors(rule.selectorText).includes(target)) return true
+    if (isGroupingRule(rule) && rule.cssRules.length > 0 && ruleListHasClass(rule.cssRules, target)) return true
+  }
+  return false
+}
+
+/**
+ * Est-ce qu'une règle CSS existe déjà pour cette classe exacte sur la page (hors feuille
+ * injectée par DevWind lui-même, cf. src/core/live-style.ts) ? Sert à savoir si on doit
+ * synthétiser nous-mêmes la règle pour prévisualiser une classe absente d'un build de
+ * production purgé (voir live-style.ts).
+ */
+export function hasRuleForClass(className: string, doc: Document = document, ignoreStyleId?: string): boolean {
+  for (const sheet of Array.from(doc.styleSheets)) {
+    const owner = sheet.ownerNode as HTMLElement | null
+    if (ignoreStyleId && owner?.id === ignoreStyleId) continue
+    let rules: CSSRuleList
+    try {
+      rules = sheet.cssRules
+    } catch {
+      continue
+    }
+    if (rules && ruleListHasClass(rules, className)) return true
+  }
+  return false
+}
