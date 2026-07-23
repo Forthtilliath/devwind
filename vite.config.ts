@@ -8,7 +8,7 @@ import manifest from './manifest.config.ts'
 // manuellement comme entrée HTML supplémentaire (chargée via chrome.windows.create, supporte
 // les modules ES normalement — contrairement au content script, buildé séparément en IIFE,
 // voir vite.content.config.ts, car injecté via chrome.scripting.executeScript).
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), crx({ manifest })],
   server: {
     // Requis par CRXJS en dev : le service worker doit pouvoir joindre le serveur HMR.
@@ -16,10 +16,14 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
+    // Mode 'test' (`npm run build:test`, cf. tests/e2e/) : sortie séparée de `dist/`, pour ne
+    // jamais mélanger un build de test (hook Playwright + content_scripts statique, voir
+    // manifest.config.ts et service-worker.ts) avec le build de production.
+    outDir: mode === 'test' ? 'dist-test' : 'dist',
     rollupOptions: {
       input: {
         devpanel: fileURLToPath(new URL('./src/devpanel/devpanel.html', import.meta.url)),
       },
     },
   },
-})
+}))

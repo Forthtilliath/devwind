@@ -6,10 +6,10 @@ import react from '@vitejs/plugin-react'
 // qui exécute le fichier comme un script classique — pas un module ES. Le build principal
 // (vite.config.ts) produit toujours des chunks ESM avec imports partagés (jsx-runtime, etc.),
 // ce qui casserait l'injection. Ici on force IIFE + tout inliné dans un seul fichier autonome.
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   build: {
-    outDir: 'dist',
+    outDir: mode === 'test' ? 'dist-test' : 'dist', // garder en phase avec vite.config.ts
     emptyOutDir: false, // ne pas effacer la sortie du build principal (vite.config.ts), lancé avant
     rollupOptions: {
       input: { content: 'src/content/main.tsx' },
@@ -20,4 +20,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

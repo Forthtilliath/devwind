@@ -9,8 +9,11 @@
     "dev": "vite",
     "prebuild": "npm run generate:tw-data",
     "build": "tsc -b && vite build && vite build --config vite.content.config.ts",
+    "build:test": "npm run generate:tw-data && tsc -b && vite build --mode test && vite build --config vite.content.config.ts --mode test",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pretest:e2e": "npm run build:test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^19.2.7",
@@ -19,6 +22,7 @@
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",
+    "@playwright/test": "^1.61.1",
     "@types/chrome": "^0.2.2",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
