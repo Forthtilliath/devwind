@@ -1,7 +1,7 @@
 {
   "name": "ext-devwind",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "generate:tw-data": "tsx scripts/generate-tailwind-data.ts",
