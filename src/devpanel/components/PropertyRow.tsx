@@ -17,6 +17,9 @@ interface PropertyRowProps {
 function formatSuffix(item: GeneratedClass): string {
   const withoutSign = item.negative ? item.className.slice(1) : item.className
   const suffix = item.prefix ? withoutSign.slice(item.prefix.length + 1) : withoutSign
+  // Forme nue (clé de thème DEFAULT, ex. `rounded`/`shadow`/`border`/`ring`) : suffixe vide,
+  // sinon le bouton/la ligne de popover s'afficherait blanc.
+  if (!suffix) return 'défaut'
   return item.negative ? `-${suffix}` : suffix
 }
 

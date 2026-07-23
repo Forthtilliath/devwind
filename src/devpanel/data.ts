@@ -32,7 +32,18 @@ function buildCategoryGroups(items: GeneratedClass[]): CategoryGroup[] {
 }
 
 /** Ordre pensé par fréquence d'usage réelle (cf. plan section 2). */
-export const CATEGORY_ORDER = ['Spacing', 'Layout', 'Sizing', 'Typography', 'Couleurs', 'Bordures & Radius']
+export const CATEGORY_ORDER = [
+  'Spacing',
+  'Layout',
+  'Sizing',
+  'Typography',
+  'Couleurs',
+  'Bordures & Radius',
+  'Effets',
+  'Filtres',
+  'Transitions & Transforms',
+  'Interactivité',
+]
 
 export const categoryGroups: CategoryGroup[] = buildCategoryGroups(classes).sort((a, b) => {
   const ai = CATEGORY_ORDER.indexOf(a.name)

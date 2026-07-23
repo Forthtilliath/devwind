@@ -14,19 +14,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const { theme } = resolveConfig({ content: [] }) as { theme: Record<string, unknown> }
 
 function className(prefix: string, key: string): string {
-  return prefix === '' ? key : `${prefix}-${key}`
+  if (prefix === '') return key
+  if (key === '') return prefix
+  return `${prefix}-${key}`
+}
+
+interface FlatEntry {
+  key: string
+  value: string
+  secondary: string | null
 }
 
 /** Aplati un objet de thème imbriqué (couleurs) en paires { suffixe de classe, valeur }. */
-function flattenThemeScale(scale: unknown, prefix = ''): Array<{ key: string; value: string }> {
-  if (typeof scale === 'string') return [{ key: prefix, value: scale }]
+function flattenThemeScale(scale: unknown, prefix = ''): FlatEntry[] {
+  if (typeof scale === 'string') return [{ key: prefix, value: scale, secondary: null }]
   if (typeof scale !== 'object' || scale === null) return []
-  const out: Array<{ key: string; value: string }> = []
+  const out: FlatEntry[] = []
   for (const [k, v] of Object.entries(scale as Record<string, unknown>)) {
     if (k === '__CSS_VALUES__') continue
     const nextKey = k === 'DEFAULT' ? prefix : prefix ? `${prefix}-${k}` : k
     if (typeof v === 'string') {
-      out.push({ key: nextKey, value: v })
+      out.push({ key: nextKey, value: v, secondary: null })
     } else if (typeof v === 'object' && v !== null) {
       out.push(...flattenThemeScale(v, nextKey))
     }
@@ -39,6 +47,16 @@ function stringifyThemeValue(value: unknown): string {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return String(value[0])
   return JSON.stringify(value)
+}
+
+/** Pour fontSize v3 uniquement : extrait le line-height apparié `[taille, {lineHeight}]`,
+ * sinon `null`. Générique (pas de branchement spécifique fontSize dans entriesForTaxonomy) :
+ * ne renvoie une valeur que si la forme du thème s'y prête. */
+function stringifySecondaryValue(value: unknown): string | null {
+  if (Array.isArray(value) && typeof value[1] === 'object' && value[1] !== null && 'lineHeight' in (value[1] as object)) {
+    return String((value[1] as { lineHeight: unknown }).lineHeight)
+  }
+  return null
 }
 
 function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
@@ -55,6 +73,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
           subcategory: entry.subcategory,
           themeKey: null,
           themeToken: null,
+          secondaryValue: null,
           negative: false,
         })
       }
@@ -66,7 +85,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
   const scale = theme[entry.themeKey]
   const flat = entry.type === 'color' ? flattenThemeScale(scale) : flattenScaleFlat(scale)
 
-  for (const { key, value } of flat) {
+  for (const { key, value, secondary } of flat) {
     for (const prefix of entry.prefixes) {
       out.push({
         className: className(prefix, key),
@@ -76,6 +95,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
         subcategory: entry.subcategory,
         themeKey: entry.themeKey,
         themeToken: stringifyThemeValue(value),
+        secondaryValue: secondary,
         negative: false,
       })
       if (entry.supportsNegative && /^[0-9.]/.test(key)) {
@@ -87,6 +107,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
           subcategory: entry.subcategory,
           themeKey: entry.themeKey,
           themeToken: stringifyThemeValue(value),
+          secondaryValue: secondary,
           negative: true,
         })
       }
@@ -95,12 +116,16 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
   return out
 }
 
-/** Pour les échelles non-couleur (spacing, fontSize, fontWeight...) : un seul niveau, pas de nesting. */
-function flattenScaleFlat(scale: unknown): Array<{ key: string; value: string }> {
+/** Pour les échelles non-couleur (spacing, fontSize, fontWeight...) : un seul niveau, pas de
+ * nesting. `DEFAULT` -> clé '' (classe nue, ex. `rounded`/`shadow`/`border`/`ring`), comme le
+ * fait déjà `flattenThemeScale` pour les couleurs — sinon on génère `rounded-DEFAULT` au lieu
+ * de `rounded`, et la vraie classe nue n'est jamais produite. */
+function flattenScaleFlat(scale: unknown): FlatEntry[] {
   if (typeof scale !== 'object' || scale === null) return []
   return Object.entries(scale as Record<string, unknown>).map(([key, value]) => ({
-    key,
+    key: key === 'DEFAULT' ? '' : key,
     value: stringifyThemeValue(value),
+    secondary: stringifySecondaryValue(value),
   }))
 }
 

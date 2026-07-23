@@ -22,6 +22,9 @@ export interface TaxonomyEntry {
   themeKey: string | null
   type: TaxonomyValueType
   staticValues?: string[]
+  /** `type: 'static'` uniquement : traduit un suffixe de classe vers sa vraie valeur CSS
+   * quand ils diffèrent (ex. `resize-x` → `horizontal`). Absent = suffixe utilisé tel quel. */
+  staticValueMap?: Record<string, string>
   supportsArbitrary: boolean
   supportsNegative: boolean
 }
@@ -35,6 +38,8 @@ export interface GeneratedClass {
   subcategory?: string
   themeKey: string | null
   themeToken: string | null
+  /** fontSize uniquement : line-height apparié (`[taille, {lineHeight}]` dans le thème Tailwind). */
+  secondaryValue: string | null
   negative: boolean
 }
 
