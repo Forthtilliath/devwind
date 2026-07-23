@@ -33,22 +33,22 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 - Pas d'indicateur visuel quand une classe appliquée n'a PAS pu être synthétisée par live-style (ex. `dark:`) — l'utilisateur ne sait pas toujours si "ça n'a pas marché" vs "il faut re-régénérer le CSS du site".
 - Export limité à "copier les classes" (texte brut espacé) — pourrait proposer d'autres formats (JSX `className={...}`, diff avant/après, liste des changements de la session).
 
-## Picker / sélection d'élément
+## Picker / sélection d'élément — ✅ fait
 
-- Pas de breadcrumb DOM (remonter au parent d'un élément sélectionné sans re-cliquer précisément dessus dans la page — utile pour des éléments très imbriqués ou petits).
-- Pas de navigation clavier une fois un élément sélectionné (flèches pour aller au parent/enfant/frère suivant, comme les DevTools natifs).
-- Le picker s'appuie sur `event.target` retargeté (marche bien), mais aucun mode "verrouiller la sélection" pour scroller/interagir avec la page sans risquer de perdre la sélection en cliquant ailleurs par erreur.
+- ~~Pas de breadcrumb DOM~~ — fil d'ariane des ancêtres (parent direct → `<body>`, plafonné à 8 niveaux) dans le devpanel, cliquable pour remonter sans re-cliquer sur la page.
+- ~~Pas de navigation clavier~~ — flèches (`↑` parent, `↓` premier enfant, `←`/`→` frères) dans le devpanel, désactivées si le focus est dans un champ texte.
+- ~~Pas de mode "verrouiller la sélection"~~ — bouton 🔒/🔓 dans l'en-tête : suspend le picking (survol/clic sur la page ignorés, interactions normales possibles) sans perdre la sélection courante ; celle-ci reste modifiable via le fil d'ariane / le clavier pendant le verrouillage.
 
-## Scan CSS
+## Scan CSS — ✅ fait
 
-- Pas de fallback `fetch()` pour les feuilles de style cross-origin sans CORS (actuellement juste listées comme "non scannables") — beaucoup de CDN publics (Google Fonts, jsDelivr, unpkg) autorisent CORS et pourraient être récupérés.
-- Le scan tourne une seule fois par sélection de fenêtre (pas de re-scan si le site charge du CSS dynamiquement après coup, ex. lazy-loaded stylesheets).
+- ~~Pas de fallback `fetch()` pour les feuilles cross-origin~~ — les feuilles qui lèvent une erreur CSSOM sont récupérées via `fetch(href, {mode:'cors'})` puis parsées dans une `CSSStyleSheet` détachée (plus de restriction cross-origin une fois le texte local) ; celles qui refusent CORS restent listées comme non scannables.
+- ~~Pas de re-scan si le site charge du CSS dynamiquement~~ — `MutationObserver` (debounced 300ms) sur l'ajout de `<link rel=stylesheet>`/`<style>`, re-scanne et pousse le résultat à jour à la fenêtre devpanel automatiquement.
 
 ## Compatibilité Tailwind
 
-- Dataset généré ciblé Tailwind v3 uniquement (`resolveConfig` v3). Tailwind v4 (config CSS-first `@theme`, moteur Oxide) non couvert — de plus en plus de sites l'utilisent (ex. tailwindcss.com lui-même utilise des classes façon v4 comme `text-balance`, `max-lg:`).
-- Pas de détection de la version Tailwind réelle du site édité, ni d'avertissement si des classes "inconnues" de notre taxonomie sont en fait des classes v4 valides.
+- ~~Dataset ciblé Tailwind v3~~ — migré vers Tailwind v4 (`tailwindcss/defaultTheme` + résolveur maison, `resolveConfig` n'existe plus en v4). Couleurs par défaut désormais en OKLCH plutôt qu'en hex (aucun changement de code nécessaire ailleurs, `color-mix()`/swatches gèrent nativement).
 - Pas de prise en compte d'un thème customisé du site (couleurs/spacing personnalisés) — le dataset et les swatches restent basés sur le thème par défaut Tailwind (documenté comme limite connue).
+- **Option `prefix` de Tailwind non gérée** : un site configuré avec un préfixe (ex. `tw-bg-red-500` au lieu de `bg-red-500`, pour éviter les collisions avec un autre framework CSS) n'est pas reconnu par `class-parser.ts` — ces classes finissent en "Custom / Autres classes" (non éditables via les pickers), et une classe ajoutée depuis le panneau serait ajoutée sans le préfixe du site (pas de correspondance avec son vrai CSS). Pas d'accès à la config du site pour connaître le préfixe réel ; à détecter par heuristique (scanner les classes du DOM/CSS pour un motif de préfixe répété devant des suffixes Tailwind connus) si jamais traité.
 
 ## Qualité / process
 
