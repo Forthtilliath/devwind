@@ -20,13 +20,29 @@ function isRecognizedTailwindClass(className: string): boolean {
 }
 
 const KNOWN_BREAKPOINTS = new Set(['sm', 'md', 'lg', 'xl', '2xl'])
-const KNOWN_PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'first', 'last', 'odd', 'even', 'visited', 'dark'])
+// Liste des variants standards Tailwind (pseudo-classes ET pseudo-éléments) : `after`/`before`
+// notamment sont de VRAIS variants Tailwind (`::after`/`::before`), pas des préfixes de site —
+// oubliés initialement, ce qui les faisait détecter à tort comme préfixe custom sur un site qui
+// les utilise (ex. `after:content-['']`). Liste volontairement large pour éviter de futurs faux
+// positifs similaires plutôt que de la compléter au fil des rapports de bugs.
+const KNOWN_PSEUDO = new Set([
+  // Pseudo-classes
+  'hover', 'focus', 'focus-visible', 'focus-within', 'active', 'visited', 'target',
+  'first', 'last', 'only', 'odd', 'even', 'first-of-type', 'last-of-type', 'only-of-type',
+  'empty', 'disabled', 'enabled', 'checked', 'indeterminate', 'default', 'required', 'optional',
+  'valid', 'invalid', 'in-range', 'out-of-range', 'placeholder-shown', 'autofill', 'read-only',
+  'open', 'inert', 'dark',
+  // Pseudo-éléments
+  'before', 'after', 'placeholder', 'file', 'marker', 'selection', 'first-line', 'first-letter', 'backdrop',
+  // v4
+  'starting',
+])
 
 function isKnownVariantToken(token: string): boolean {
   if (KNOWN_BREAKPOINTS.has(token)) return true
   if (token.startsWith('max-') && KNOWN_BREAKPOINTS.has(token.slice(4))) return true
   if (KNOWN_PSEUDO.has(token)) return true
-  if (/^(group|peer)-/.test(token)) return true
+  if (/^(group|peer|not)-/.test(token)) return true
   if (/^aria-/.test(token)) return true
   if (/^has-\[/.test(token)) return true
   if (/^data-\[/.test(token)) return true
