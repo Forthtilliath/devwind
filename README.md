@@ -69,11 +69,14 @@ Le build de test (`npm run build:test`) diffère du build de production sur deux
 
 ### Publier une release
 
-Bumper `version` dans `package.json`, committer, puis taguer et pousser :
+Une seule commande (working directory propre requis) :
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+npm version patch   # ou minor / major
 ```
+
+`npm version` bump `package.json`, commit et tague (`vX.Y.Z`) en un coup ; les hooks `preversion`/`postversion` (voir `package.json`) font le reste automatiquement :
+1. `preversion` — lint + type-check, annule tout si ça échoue (rien n'est bumpé/tagué).
+2. `postversion` — pousse le commit ET le tag, ce qui déclenche `.github/workflows/release.yml` (build, zip, Release GitHub).
 
 Le workflow `.github/workflows/release.yml` build, zippe `dist/` et publie automatiquement une Release GitHub avec le zip en pièce jointe.

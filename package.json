@@ -13,7 +13,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "pretest:e2e": "npm run build:test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "preversion": "npm run lint && tsc -b",
+    "postversion": "git push && git push --tags"
   },
   "dependencies": {
     "react": "^19.2.7",
