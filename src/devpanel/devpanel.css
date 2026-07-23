@@ -469,10 +469,35 @@ body {
 .devwind-category-nav__rail {
   display: flex;
   flex-direction: column;
-  width: 108px;
   flex-shrink: 0;
-  border-right: 1px solid var(--dw-border);
   overflow-y: auto;
+}
+
+/* Poignée de redimensionnement entre le rail et le contenu : zone de drag de 5px (plus
+   confortable qu'1px), avec un trait visuel fin dessiné via ::after pour ne pas paraître épaisse
+   au repos. Porte aussi la bordure visuelle du rail (qui n'en a donc plus lui-même). */
+.devwind-category-nav__resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  position: relative;
+}
+
+.devwind-category-nav__resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--dw-border);
+}
+
+.devwind-category-nav__resize-handle:hover::after,
+.devwind-category-nav__resize-handle--active::after {
+  background: var(--dw-accent);
+  width: 2px;
+  left: 1.5px;
 }
 
 .devwind-category-nav__tab {
