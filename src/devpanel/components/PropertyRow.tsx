@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import Popover from './Popover'
 import ValuePickerList from './ValuePickerList'
+import SideIcon, { hasSideIcon } from './SideIcon'
+import { formatSuffix } from '../format'
 import type { GeneratedClass, TaxonomyEntry } from '../../types'
 
 interface PropertyRowProps {
@@ -12,15 +14,6 @@ interface PropertyRowProps {
   variants: string[]
   onApply: (item: GeneratedClass) => void
   onApplyArbitrary: (prefix: string, value: string) => void
-}
-
-function formatSuffix(item: GeneratedClass): string {
-  const withoutSign = item.negative ? item.className.slice(1) : item.className
-  const suffix = item.prefix ? withoutSign.slice(item.prefix.length + 1) : withoutSign
-  // Forme nue (clé de thème DEFAULT, ex. `rounded`/`shadow`/`border`/`ring`) : suffixe vide,
-  // sinon le bouton/la ligne de popover s'afficherait blanc.
-  if (!suffix) return 'défaut'
-  return item.negative ? `-${suffix}` : suffix
 }
 
 function withVariants(variants: string[], className: string): string {
@@ -72,9 +65,10 @@ export default function PropertyRow({ entry, classes, activeClasses, variants, o
               key={p}
               type="button"
               className={`devwind-side${p === activePrefix ? ' devwind-side--active' : ''}`}
+              title={p}
               onClick={() => setActivePrefix(p)}
             >
-              {p}
+              {hasSideIcon(p) ? <SideIcon prefix={p} /> : p}
             </button>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { GeneratedClass } from '../../types'
 
 interface ArbitraryConfig {
@@ -19,13 +19,37 @@ interface ValuePickerListProps {
  * Un seul composant de liste recherchable réutilisé pour les entrées `scale` ET `color` :
  * la recherche règle déjà le problème d'un mur de valeurs (taper "red" ou "500" filtre
  * instantanément un mur de 242 couleurs) — pas besoin de deux composants dédiés bespoke.
+ * Navigable au clavier (↑/↓ pour déplacer la surbrillance, Entrée pour choisir).
  */
 export default function ValuePickerList({ items, showSwatch, activeClassName, labelFor, onPick, arbitrary }: ValuePickerListProps) {
   const [query, setQuery] = useState('')
   const [arbitraryValue, setArbitraryValue] = useState('')
+  const [highlighted, setHighlighted] = useState(0)
+  const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
 
   const q = query.trim().toLowerCase()
   const filtered = q ? items.filter((i) => i.className.toLowerCase().includes(q)) : items
+
+  useEffect(() => setHighlighted(0), [query])
+
+  useEffect(() => {
+    const item = filtered[highlighted]
+    if (item) rowRefs.current.get(item.className)?.scrollIntoView({ block: 'nearest' })
+  }, [highlighted, filtered])
+
+  function onSearchKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlighted((i) => Math.min(i + 1, filtered.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlighted((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const item = filtered[highlighted]
+      if (item) onPick(item)
+    }
+  }
 
   return (
     <div className="devwind-vpl">
@@ -36,13 +60,19 @@ export default function ValuePickerList({ items, showSwatch, activeClassName, la
         placeholder="Rechercher…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={onSearchKeyDown}
       />
       <div className="devwind-vpl__list">
-        {filtered.map((item) => (
+        {filtered.map((item, index) => (
           <button
             key={item.className}
+            ref={(el) => {
+              if (el) rowRefs.current.set(item.className, el)
+              else rowRefs.current.delete(item.className)
+            }}
             type="button"
-            className={`devwind-vpl__row${item.className === activeClassName ? ' devwind-vpl__row--active' : ''}`}
+            className={`devwind-vpl__row${item.className === activeClassName ? ' devwind-vpl__row--active' : ''}${index === highlighted ? ' devwind-vpl__row--highlighted' : ''}`}
+            onMouseEnter={() => setHighlighted(index)}
             onClick={() => onPick(item)}
           >
             {showSwatch && <span className="devwind-vpl__swatch" style={{ background: item.themeToken ?? undefined }} />}

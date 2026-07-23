@@ -3,9 +3,13 @@ import { createRoot } from 'react-dom/client'
 import DevPanel from './DevPanel'
 import { useDevPanelStore } from './store/useDevPanelStore'
 import { saveWindowBounds } from '../core/activation'
+import { applyTheme, loadTheme } from './theme'
 import './devpanel.css'
 
 useDevPanelStore.getState().connect()
+
+// Appliqué avant le premier rendu pour éviter un flash du thème par défaut (sombre).
+void loadTheme().then(applyTheme)
 
 // Sauvegarde légère de la position/taille de la fenêtre (debattue sur resize/blur) pour la
 // réappliquer à la prochaine ouverture — sert le besoin "je la mets toujours sur mon 2e écran".

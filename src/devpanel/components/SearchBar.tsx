@@ -7,9 +7,10 @@ interface SearchBarProps {
 export default function SearchBar({ value, onChange }: SearchBarProps) {
   return (
     <input
+      id="devwind-search-input"
       type="text"
       className="devwind-search"
-      placeholder="Rechercher une classe (ex. bg-red, p-4)…"
+      placeholder="Rechercher une classe (ex. bg-red, p-4)… (Ctrl/Cmd+F)"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />

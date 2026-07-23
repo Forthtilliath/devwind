@@ -41,7 +41,12 @@ function send(message: SyncFromContent) {
 
 async function runCssScan() {
   const result = await scanCustomClasses()
-  send({ type: 'CUSTOM_SCAN_RESULT', found: Array.from(result.found.entries()), unscannable: result.unscannable })
+  send({
+    type: 'CUSTOM_SCAN_RESULT',
+    found: Array.from(result.found.entries()),
+    unscannable: result.unscannable,
+    detectedPrefix: result.detectedPrefix,
+  })
 }
 
 export interface SetupSyncOptions {
@@ -88,11 +93,13 @@ function handlePanelMessage(message: SyncFromPanel) {
   switch (message.type) {
     case 'APPLY_CHANGE': {
       if (!selectedEl) return
+      let unsupportedClass: string | null = null
       if (message.request.newBase) {
-        ensureLiveRule([...message.request.variants, message.request.newBase].join(':'))
+        const fullClassName = [...message.request.variants, message.request.newBase].join(':')
+        if (ensureLiveRule(fullClassName) === 'unsupported') unsupportedClass = fullClassName
       }
       applyClassChange(selectedEl, message.request)
-      send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl) })
+      send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl), unsupportedClass })
       return
     }
     case 'REMOVE_CLASS': {

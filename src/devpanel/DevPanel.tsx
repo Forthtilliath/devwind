@@ -6,7 +6,11 @@ import CategoryNav from './components/CategoryNav'
 import CustomClassesSection from './components/CustomClassesSection'
 import VariantToolbar from './components/VariantToolbar'
 import Breadcrumb from './components/Breadcrumb'
+import RecentClasses from './components/RecentClasses'
+import Popover from './components/Popover'
 import { searchClasses } from './data'
+import { loadTheme, setTheme, NEXT_THEME, THEME_ICON } from './theme'
+import type { ThemePreference } from './theme'
 import type { GeneratedClass, NavigateDirection } from '../types'
 
 function arbitraryClassName(prefix: string, value: string): string {
@@ -28,9 +32,11 @@ function isTypingTarget(el: Element | null): boolean {
 
 export default function DevPanel() {
   const [copied, setCopied] = useState(false)
+  const [theme, setThemeState] = useState<ThemePreference>('auto')
   const connectionState = useDevPanelStore((s) => s.connectionState)
   const tagName = useDevPanelStore((s) => s.tagName)
   const activeClasses = useDevPanelStore((s) => s.activeClasses)
+  const unsupportedClasses = useDevPanelStore((s) => s.unsupportedClasses)
   const ancestors = useDevPanelStore((s) => s.ancestors)
   const search = useDevPanelStore((s) => s.search)
   const setSearch = useDevPanelStore((s) => s.setSearch)
@@ -42,10 +48,22 @@ export default function DevPanel() {
   const navigate = useDevPanelStore((s) => s.navigate)
   const locked = useDevPanelStore((s) => s.locked)
   const toggleLocked = useDevPanelStore((s) => s.toggleLocked)
+  const recentClasses = useDevPanelStore((s) => s.recentClasses)
+  const recordRecent = useDevPanelStore((s) => s.recordRecent)
 
-  // Navigation clavier (parent/enfant/frères), désactivée si on tape dans un champ texte.
+  useEffect(() => {
+    void loadTheme().then(setThemeState)
+  }, [])
+
+  // Navigation clavier (parent/enfant/frères) + focus recherche (Ctrl/Cmd+F), désactivées si
+  // on tape déjà dans un champ texte.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        document.getElementById('devwind-search-input')?.focus()
+        return
+      }
       if (!tagName) return
       if (isTypingTarget(document.activeElement)) return
       const direction = ARROW_TO_DIRECTION[e.key]
@@ -70,16 +88,24 @@ export default function DevPanel() {
 
   function applyItem(item: GeneratedClass) {
     applyChange({ taxonomyId: item.taxonomyId, prefix: item.prefix, variants: activeVariants, newBase: item.className })
+    recordRecent(item)
   }
 
   function applyArbitrary(taxonomyId: string, prefix: string, value: string) {
     applyChange({ taxonomyId, prefix, variants: activeVariants, newBase: arbitraryClassName(prefix, value) })
   }
 
-  async function copyClasses() {
-    await navigator.clipboard.writeText(activeClasses.join(' '))
+  async function copyAs(format: 'plain' | 'jsx') {
+    const text = format === 'jsx' ? `className="${activeClasses.join(' ')}"` : activeClasses.join(' ')
+    await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 1200)
+  }
+
+  async function cycleTheme() {
+    const next = NEXT_THEME[theme]
+    setThemeState(next)
+    await setTheme(next)
   }
 
   return (
@@ -87,6 +113,14 @@ export default function DevPanel() {
       <header className="devwind-panel__header">
         <span className="devwind-panel__title">DevWind</span>
         <div className="devwind-panel__header-right">
+          <button
+            type="button"
+            className="devwind-theme-btn"
+            onClick={() => void cycleTheme()}
+            title={`Thème : ${theme} (clic pour changer)`}
+          >
+            {THEME_ICON[theme]}
+          </button>
           <button
             type="button"
             className={`devwind-lock-btn${locked ? ' devwind-lock-btn--active' : ''}`}
@@ -101,9 +135,30 @@ export default function DevPanel() {
                 &lt;{tagName}&gt; · {activeClasses.length} classes
               </span>
               {activeClasses.length > 0 && (
-                <button type="button" className="devwind-copy-btn" onClick={() => void copyClasses()}>
-                  {copied ? 'Copié !' : 'Copier'}
-                </button>
+                <Popover label={copied ? 'Copié !' : 'Copier ▾'} triggerClassName="devwind-copy-btn">
+                  {(close) => (
+                    <div className="devwind-export__menu">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void copyAs('plain')
+                          close()
+                        }}
+                      >
+                        Classes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void copyAs('jsx')
+                          close()
+                        }}
+                      >
+                        JSX (className="…")
+                      </button>
+                    </div>
+                  )}
+                </Popover>
               )}
             </>
           )}
@@ -116,6 +171,7 @@ export default function DevPanel() {
         <>
           <Breadcrumb ancestors={ancestors} tagName={tagName} onSelectAncestor={selectAncestor} />
           <VariantToolbar activeVariants={activeVariants} onToggle={toggleVariant} />
+          <RecentClasses items={recentClasses} activeClasses={activeClasses} variants={activeVariants} onApply={applyItem} />
           <SearchBar value={search} onChange={setSearch} />
 
           {searchResults.length > 0 ? (
@@ -141,7 +197,9 @@ export default function DevPanel() {
                 {activeClasses.length === 0 ? (
                   <p className="devwind-empty">Aucune classe sur cet élément.</p>
                 ) : (
-                  activeClasses.map((c) => <ClassChip key={c} rawClass={c} onRemove={removeClass} />)
+                  activeClasses.map((c) => (
+                    <ClassChip key={c} rawClass={c} onRemove={removeClass} unsupported={unsupportedClasses.includes(c)} />
+                  ))
                 )}
               </section>
 

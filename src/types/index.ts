@@ -84,6 +84,9 @@ export interface CustomClassInfo {
 export interface CssScanResult {
   found: Map<string, string[]>
   unscannable: string[]
+  /** Préfixe de site détecté par heuristique (option `prefix` de Tailwind v4), informatif
+   * uniquement — voir `detectSitePrefix` dans css-scanner.ts. */
+  detectedPrefix: string | null
 }
 
 // --- Synchronisation content script <-> fenêtre devpanel (via chrome.runtime.Port) ---
@@ -97,12 +100,18 @@ export interface AncestorInfo {
   classes: string[]
 }
 
+/** Résultat de `ensureLiveRule` (live-style.ts) : `has-real-rule` = le CSS du site définit
+ * déjà cette classe (rien synthétisé) ; `synthesized` = injectée par nous ; `unsupported` =
+ * ni l'un ni l'autre, la classe appliquée n'aura probablement aucun effet visuel (ex. `dark:`
+ * sans stratégie détectable, variant non géré...). */
+export type LiveRuleStatus = 'has-real-rule' | 'synthesized' | 'unsupported'
+
 /** Messages envoyés par le content script vers la fenêtre devpanel connectée. */
 export type SyncFromContent =
   | { type: 'ELEMENT_SELECTED'; tagName: string; classes: string[]; ancestors: AncestorInfo[] }
   | { type: 'ELEMENT_CLEARED' }
-  | { type: 'CLASSES_UPDATED'; classes: string[] }
-  | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[] }
+  | { type: 'CLASSES_UPDATED'; classes: string[]; unsupportedClass?: string | null }
+  | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[]; detectedPrefix: string | null }
 
 /** Direction de navigation clavier, relative à l'élément sélectionné. */
 export type NavigateDirection = 'parent' | 'child' | 'prev' | 'next'

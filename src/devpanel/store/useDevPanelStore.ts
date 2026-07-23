@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
-import type { AncestorInfo, ClassChangeRequest, CssScanResult, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
+import type { AncestorInfo, ClassChangeRequest, CssScanResult, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
 
 function getTargetTabId(): number {
   const raw = new URLSearchParams(window.location.search).get('tabId')
@@ -12,6 +12,9 @@ function getTargetTabId(): number {
 // Le Port de sync est gardé hors du state React (comme `selectedEl` l'était côté content
 // script) : ce n'est pas une donnée à re-render, juste un canal de communication.
 let port: chrome.runtime.Port | null = null
+
+const RECENT_STORAGE_KEY = 'devwind-recent-classes'
+const MAX_RECENT = 24
 
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected'
 
@@ -28,6 +31,13 @@ interface DevPanelState {
   /** Verrouillé : le picker ne réagit plus au survol/clic sur la page (on peut interagir avec
    * la page normalement), la sélection ne change plus que via le fil d'ariane / le clavier. */
   locked: boolean
+  /** Classes appliquées cette session dont `live-style` n'a pas pu synthétiser d'effet visuel
+   * (variant non géré, ex. `dark:` sans stratégie détectable) — nettoyé automatiquement dès
+   * que la classe n'est plus dans `activeClasses` (retirée/remplacée). */
+  unsupportedClasses: string[]
+  /** Dernières valeurs choisies via un picker (pas les valeurs arbitraires), les plus récentes
+   * en premier — persisté dans chrome.storage.local, partagé entre onglets/sessions. */
+  recentClasses: GeneratedClass[]
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -39,6 +49,7 @@ interface DevPanelState {
   selectAncestor: (index: number) => void
   navigate: (direction: NavigateDirection) => void
   toggleLocked: () => void
+  recordRecent: (item: GeneratedClass) => void
 }
 
 function send(message: SyncFromPanel) {
@@ -54,6 +65,8 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   search: '',
   activeVariants: [],
   locked: false,
+  unsupportedClasses: [],
+  recentClasses: [],
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -61,19 +74,28 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     port = p
     set({ connectionState: 'connected' })
 
+    void chrome.storage.local.get(RECENT_STORAGE_KEY).then((stored) => {
+      const recent = stored[RECENT_STORAGE_KEY]
+      if (Array.isArray(recent)) set({ recentClasses: recent as GeneratedClass[] })
+    })
+
     p.onMessage.addListener((message: SyncFromContent) => {
       switch (message.type) {
         case 'ELEMENT_SELECTED':
-          set({ tagName: message.tagName, activeClasses: message.classes, ancestors: message.ancestors })
+          set({ tagName: message.tagName, activeClasses: message.classes, ancestors: message.ancestors, unsupportedClasses: [] })
           return
         case 'ELEMENT_CLEARED':
-          set({ tagName: null, activeClasses: [], ancestors: [] })
+          set({ tagName: null, activeClasses: [], ancestors: [], unsupportedClasses: [] })
           return
         case 'CLASSES_UPDATED':
-          set({ activeClasses: message.classes })
+          set((s) => {
+            const kept = s.unsupportedClasses.filter((c) => message.classes.includes(c))
+            if (message.unsupportedClass && !kept.includes(message.unsupportedClass)) kept.push(message.unsupportedClass)
+            return { activeClasses: message.classes, unsupportedClasses: kept }
+          })
           return
         case 'CUSTOM_SCAN_RESULT':
-          set({ customScan: { found: new Map(message.found), unscannable: message.unscannable } })
+          set({ customScan: { found: new Map(message.found), unscannable: message.unscannable, detectedPrefix: message.detectedPrefix } })
           return
       }
     })
@@ -106,4 +128,10 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
       send({ type: 'SET_LOCKED', locked })
       return { locked }
     }),
+  recordRecent: (item) => {
+    const current = get().recentClasses.filter((c) => c.className !== item.className)
+    const next = [item, ...current].slice(0, MAX_RECENT)
+    set({ recentClasses: next })
+    void chrome.storage.local.set({ [RECENT_STORAGE_KEY]: next })
+  },
 }))

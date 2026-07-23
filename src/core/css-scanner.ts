@@ -19,6 +19,51 @@ function isRecognizedTailwindClass(className: string): boolean {
   return matchTaxonomy(base) !== null
 }
 
+const KNOWN_BREAKPOINTS = new Set(['sm', 'md', 'lg', 'xl', '2xl'])
+const KNOWN_PSEUDO = new Set(['hover', 'focus', 'focus-visible', 'focus-within', 'active', 'disabled', 'first', 'last', 'odd', 'even', 'visited', 'dark'])
+
+function isKnownVariantToken(token: string): boolean {
+  if (KNOWN_BREAKPOINTS.has(token)) return true
+  if (token.startsWith('max-') && KNOWN_BREAKPOINTS.has(token.slice(4))) return true
+  if (KNOWN_PSEUDO.has(token)) return true
+  if (/^(group|peer)-/.test(token)) return true
+  if (/^aria-/.test(token)) return true
+  if (/^has-\[/.test(token)) return true
+  if (/^data-\[/.test(token)) return true
+  return false
+}
+
+/**
+ * Détection heuristique d'un préfixe de site (option `prefix` de Tailwind v4 — syntaxe
+ * `tw:bg-red-500`, un variant supplémentaire en tête, PAS un tiret collé comme en v3). Purement
+ * informatif pour l'instant : un variant en tête inconnu ne gêne pas la reconnaissance de la
+ * base (`bg-red-500` matche toujours), mais son remplacement via le panneau ou sa synthèse live
+ * combinée à d'autres variants ne tiennent pas encore compte du préfixe détecté (voir UPGRADES.md).
+ */
+export function detectSitePrefix(doc: Document = document): string | null {
+  const candidates = new Map<string, number>()
+  for (const el of Array.from(doc.querySelectorAll('[class]'))) {
+    for (const raw of el.className.toString().split(/\s+/).filter(Boolean)) {
+      const { variants, base } = splitVariants(raw)
+      const [first, ...rest] = variants
+      if (!first || isKnownVariantToken(first)) continue
+      if (!/^[a-z][a-z0-9-]*$/.test(first)) continue
+      if (rest.some((v) => !isKnownVariantToken(v))) continue
+      if (matchTaxonomy(base) === null) continue
+      candidates.set(first, (candidates.get(first) ?? 0) + 1)
+    }
+  }
+  let best: string | null = null
+  let bestCount = 0
+  for (const [candidate, count] of candidates) {
+    if (count > bestCount) {
+      best = candidate
+      bestCount = count
+    }
+  }
+  return bestCount >= 3 ? best : null
+}
+
 function extractClassSelectors(selectorText: string): string[] {
   const out: string[] = []
   for (const m of selectorText.matchAll(CLASS_SELECTOR_RE)) {
@@ -110,7 +155,7 @@ export async function scanCustomClasses(doc: Document = document): Promise<CssSc
     }),
   )
 
-  return { found, unscannable }
+  return { found, unscannable, detectedPrefix: detectSitePrefix(doc) }
 }
 
 function ruleListHasClass(rules: CSSRuleList, target: string): boolean {
