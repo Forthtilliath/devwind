@@ -90,12 +90,22 @@ export interface CssScanResult {
 
 export const DEVWIND_SYNC_PORT = 'devwind-sync'
 
+/** Un ancêtre dans le fil d'ariane (cf. DevPanel), du parent direct jusqu'à `<body>`. */
+export interface AncestorInfo {
+  tagName: string
+  id: string | null
+  classes: string[]
+}
+
 /** Messages envoyés par le content script vers la fenêtre devpanel connectée. */
 export type SyncFromContent =
-  | { type: 'ELEMENT_SELECTED'; tagName: string; classes: string[] }
+  | { type: 'ELEMENT_SELECTED'; tagName: string; classes: string[]; ancestors: AncestorInfo[] }
   | { type: 'ELEMENT_CLEARED' }
   | { type: 'CLASSES_UPDATED'; classes: string[] }
   | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[] }
+
+/** Direction de navigation clavier, relative à l'élément sélectionné. */
+export type NavigateDirection = 'parent' | 'child' | 'prev' | 'next'
 
 /** Messages envoyés par la fenêtre devpanel vers le content script. */
 export type SyncFromPanel =
@@ -103,3 +113,6 @@ export type SyncFromPanel =
   | { type: 'REMOVE_CLASS'; rawClass: string }
   | { type: 'TOGGLE_CLASS'; rawClass: string }
   | { type: 'RUN_CSS_SCAN' }
+  | { type: 'SELECT_ANCESTOR'; index: number }
+  | { type: 'NAVIGATE'; direction: NavigateDirection }
+  | { type: 'SET_LOCKED'; locked: boolean }

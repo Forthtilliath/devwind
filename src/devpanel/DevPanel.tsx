@@ -1,15 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDevPanelStore } from './store/useDevPanelStore'
 import ClassChip from './components/ClassChip'
 import SearchBar from './components/SearchBar'
 import CategoryNav from './components/CategoryNav'
 import CustomClassesSection from './components/CustomClassesSection'
 import VariantToolbar from './components/VariantToolbar'
+import Breadcrumb from './components/Breadcrumb'
 import { searchClasses } from './data'
-import type { GeneratedClass } from '../types'
+import type { GeneratedClass, NavigateDirection } from '../types'
 
 function arbitraryClassName(prefix: string, value: string): string {
   return prefix === '' ? `[${value}]` : `${prefix}-[${value}]`
+}
+
+const ARROW_TO_DIRECTION: Record<string, NavigateDirection> = {
+  ArrowUp: 'parent',
+  ArrowDown: 'child',
+  ArrowLeft: 'prev',
+  ArrowRight: 'next',
+}
+
+function isTypingTarget(el: Element | null): boolean {
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || (el as HTMLElement).isContentEditable
 }
 
 export default function DevPanel() {
@@ -17,12 +31,31 @@ export default function DevPanel() {
   const connectionState = useDevPanelStore((s) => s.connectionState)
   const tagName = useDevPanelStore((s) => s.tagName)
   const activeClasses = useDevPanelStore((s) => s.activeClasses)
+  const ancestors = useDevPanelStore((s) => s.ancestors)
   const search = useDevPanelStore((s) => s.search)
   const setSearch = useDevPanelStore((s) => s.setSearch)
   const applyChange = useDevPanelStore((s) => s.applyChange)
   const removeClass = useDevPanelStore((s) => s.removeClass)
   const activeVariants = useDevPanelStore((s) => s.activeVariants)
   const toggleVariant = useDevPanelStore((s) => s.toggleVariant)
+  const selectAncestor = useDevPanelStore((s) => s.selectAncestor)
+  const navigate = useDevPanelStore((s) => s.navigate)
+  const locked = useDevPanelStore((s) => s.locked)
+  const toggleLocked = useDevPanelStore((s) => s.toggleLocked)
+
+  // Navigation clavier (parent/enfant/frères), désactivée si on tape dans un champ texte.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!tagName) return
+      if (isTypingTarget(document.activeElement)) return
+      const direction = ARROW_TO_DIRECTION[e.key]
+      if (!direction) return
+      e.preventDefault()
+      navigate(direction)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [tagName, navigate])
 
   if (connectionState === 'disconnected') {
     return (
@@ -53,24 +86,35 @@ export default function DevPanel() {
     <div className="devwind-panel">
       <header className="devwind-panel__header">
         <span className="devwind-panel__title">DevWind</span>
-        {tagName && (
-          <div className="devwind-panel__header-right">
-            <span className="devwind-panel__count">
-              &lt;{tagName}&gt; · {activeClasses.length} classes
-            </span>
-            {activeClasses.length > 0 && (
-              <button type="button" className="devwind-copy-btn" onClick={() => void copyClasses()}>
-                {copied ? 'Copié !' : 'Copier'}
-              </button>
-            )}
-          </div>
-        )}
+        <div className="devwind-panel__header-right">
+          <button
+            type="button"
+            className={`devwind-lock-btn${locked ? ' devwind-lock-btn--active' : ''}`}
+            onClick={toggleLocked}
+            title={locked ? 'Déverrouiller (reprendre la sélection au survol/clic)' : 'Verrouiller la sélection (interagir avec la page sans la perdre)'}
+          >
+            {locked ? '🔒' : '🔓'}
+          </button>
+          {tagName && (
+            <>
+              <span className="devwind-panel__count">
+                &lt;{tagName}&gt; · {activeClasses.length} classes
+              </span>
+              {activeClasses.length > 0 && (
+                <button type="button" className="devwind-copy-btn" onClick={() => void copyClasses()}>
+                  {copied ? 'Copié !' : 'Copier'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </header>
 
       {!tagName ? (
         <p className="devwind-hint">Clique sur un élément de la page pour éditer ses classes.</p>
       ) : (
         <>
+          <Breadcrumb ancestors={ancestors} tagName={tagName} onSelectAncestor={selectAncestor} />
           <VariantToolbar activeVariants={activeVariants} onToggle={toggleVariant} />
           <SearchBar value={search} onChange={setSearch} />
 

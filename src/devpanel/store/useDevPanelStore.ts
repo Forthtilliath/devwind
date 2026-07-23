@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
-import type { ClassChangeRequest, CssScanResult, SyncFromContent, SyncFromPanel } from '../../types'
+import type { AncestorInfo, ClassChangeRequest, CssScanResult, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
 
 function getTargetTabId(): number {
   const raw = new URLSearchParams(window.location.search).get('tabId')
@@ -19,10 +19,15 @@ interface DevPanelState {
   connectionState: ConnectionState
   tagName: string | null
   activeClasses: string[]
+  /** Du parent direct jusqu'à `<body>` : fil d'ariane pour remonter sans re-cliquer sur la page. */
+  ancestors: AncestorInfo[]
   customScan: CssScanResult | null
   search: string
   /** Contexte de variant courant (ex. ['md','hover']) : appliqué à toute nouvelle édition. */
   activeVariants: string[]
+  /** Verrouillé : le picker ne réagit plus au survol/clic sur la page (on peut interagir avec
+   * la page normalement), la sélection ne change plus que via le fil d'ariane / le clavier. */
+  locked: boolean
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -31,6 +36,9 @@ interface DevPanelState {
   runCssScan: () => void
   setSearch: (query: string) => void
   toggleVariant: (variant: string) => void
+  selectAncestor: (index: number) => void
+  navigate: (direction: NavigateDirection) => void
+  toggleLocked: () => void
 }
 
 function send(message: SyncFromPanel) {
@@ -41,9 +49,11 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   connectionState: 'connecting',
   tagName: null,
   activeClasses: [],
+  ancestors: [],
   customScan: null,
   search: '',
   activeVariants: [],
+  locked: false,
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -54,10 +64,10 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     p.onMessage.addListener((message: SyncFromContent) => {
       switch (message.type) {
         case 'ELEMENT_SELECTED':
-          set({ tagName: message.tagName, activeClasses: message.classes })
+          set({ tagName: message.tagName, activeClasses: message.classes, ancestors: message.ancestors })
           return
         case 'ELEMENT_CLEARED':
-          set({ tagName: null, activeClasses: [] })
+          set({ tagName: null, activeClasses: [], ancestors: [] })
           return
         case 'CLASSES_UPDATED':
           set({ activeClasses: message.classes })
@@ -88,4 +98,12 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
         ? s.activeVariants.filter((v) => v !== variant)
         : [...s.activeVariants, variant],
     })),
+  selectAncestor: (index) => send({ type: 'SELECT_ANCESTOR', index }),
+  navigate: (direction) => send({ type: 'NAVIGATE', direction }),
+  toggleLocked: () =>
+    set((s) => {
+      const locked = !s.locked
+      send({ type: 'SET_LOCKED', locked })
+      return { locked }
+    }),
 }))

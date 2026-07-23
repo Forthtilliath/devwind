@@ -9,6 +9,11 @@ export interface ElementPickerOptions {
 export interface ElementPicker {
   start(): void
   stop(): void
+  /** Affiche/masque le rectangle de surbrillance sur un élément précis, indépendamment du
+   * survol de la souris — utilisé pour la navigation clavier / le fil d'ariane des ancêtres,
+   * qui changent la sélection sans mouvement de souris (marche même après `stop()`, donc
+   * reste visible en mode verrouillé). */
+  showSelection(el: Element | null): void
 }
 
 function describeElement(el: Element): string {
@@ -81,6 +86,10 @@ export function createElementPicker({ shadowRoot, host, onSelect }: ElementPicke
   }
 
   return {
+    showSelection(el) {
+      if (el && el.isConnected) overlay.show(el.getBoundingClientRect(), describeElement(el))
+      else overlay.hide()
+    },
     start() {
       if (active) return
       active = true

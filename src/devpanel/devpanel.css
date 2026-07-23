@@ -69,6 +69,66 @@ body {
   color: #a5b4fc;
 }
 
+.devwind-lock-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.devwind-lock-btn:hover {
+  border-color: #6366f1;
+}
+
+.devwind-lock-btn--active {
+  background: #78350f;
+  border-color: #f59e0b;
+}
+
+.devwind-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border-bottom: 1px solid #3f3f46;
+  font-size: 10px;
+  font-family: ui-monospace, Menlo, monospace;
+  flex-shrink: 0;
+}
+
+.devwind-breadcrumb__segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.devwind-breadcrumb__item {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 1px 2px;
+  font: inherit;
+}
+
+.devwind-breadcrumb__item:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
+
+.devwind-breadcrumb__sep {
+  color: #52525b;
+}
+
+.devwind-breadcrumb__current {
+  color: #e4e4e7;
+  font-weight: 600;
+}
+
 .devwind-panel__count {
   font-size: 11px;
   color: #a1a1aa;

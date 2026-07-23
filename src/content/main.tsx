@@ -13,6 +13,7 @@ function mount() {
   const { host, shadowRoot } = mountShadowHost(HOST_ID)
 
   let pickerActive = false
+  let locked = false
 
   const picker = createElementPicker({
     shadowRoot,
@@ -29,7 +30,18 @@ function mount() {
     onPortDisconnected: () => {
       // Fenêtre devpanel fermée : plus personne pour éditer, on arrête le picker.
       pickerActive = false
+      locked = false
       picker.stop()
+    },
+    onSelectionChanged: (el) => picker.showSelection(el),
+    onSetLocked: (nextLocked) => {
+      // Verrouillé : on suspend le picking (survol/clic) pour laisser l'utilisateur interagir
+      // normalement avec la page — la sélection courante reste visible (showSelection marche
+      // indépendamment de start()/stop()) et reste modifiable via le fil d'ariane / le clavier
+      // côté devpanel. Déverrouillé : on reprend le picking si la session est toujours active.
+      locked = nextLocked
+      if (locked) picker.stop()
+      else if (pickerActive) picker.start()
     },
   })
 
@@ -43,7 +55,8 @@ function mount() {
         return true
       case 'DEVWIND_SET_ACTIVE': {
         pickerActive = message.active
-        if (pickerActive) picker.start()
+        if (!pickerActive) locked = false
+        if (pickerActive && !locked) picker.start()
         else picker.stop()
         sendResponse(state())
         return true
