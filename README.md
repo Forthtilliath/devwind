@@ -17,14 +17,18 @@ Cible **Tailwind CSS v4** (thème par défaut en OKLCH, variables CSS `@theme`, 
 
 Détail complet des fonctionnalités et idées futures : [UPGRADES.md](UPGRADES.md).
 
-## Installation (développement)
+## Installation
+
+**Depuis une Release** (le plus simple, pas besoin de builder) : télécharger le zip attaché à la [dernière release GitHub](../../releases/latest), l'extraire, puis dans Chrome : `chrome://extensions` → activer le *mode développeur* → *Charger l'extension non empaquetée* → sélectionner le dossier extrait.
+
+**Depuis les sources** :
 
 ```sh
 npm install
 npm run build
 ```
 
-Puis dans Chrome : `chrome://extensions` → activer le *mode développeur* → *Charger l'extension non empaquetée* → sélectionner le dossier `dist/`.
+Puis charger le dossier `dist/` de la même façon.
 
 ## Utilisation
 
@@ -61,3 +65,14 @@ npm run test:e2e   # build un dist-test/ dédié, puis lance les tests
 Le build de test (`npm run build:test`) diffère du build de production sur deux points seulement, tous deux absents en production (vérifié : éliminés au build par Vite via `import.meta.env.MODE`) :
 - un hook (`self.__devwindTestToggle`) pour ouvrir le panneau sans dépendre d'un geste utilisateur, que Playwright ne peut pas simuler de façon fiable ;
 - `host_permissions` sur `http://localhost/*`, pour que l'injection du content script marche sans ce même geste.
+
+### Publier une release
+
+Bumper `version` dans `package.json`, committer, puis taguer et pousser :
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Le workflow `.github/workflows/release.yml` build, zippe `dist/` et publie automatiquement une Release GitHub avec le zip en pièce jointe.
