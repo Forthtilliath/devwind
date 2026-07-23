@@ -2,7 +2,7 @@ import { addRawClass, applyClassChange, removeRawClass } from '../core/class-dif
 import { scanCustomClasses, watchForStylesheetChanges } from '../core/css-scanner'
 import { ensureLiveRule } from '../core/live-style'
 import { DEVWIND_SYNC_PORT } from '../types'
-import type { AncestorInfo, SyncFromContent, SyncFromPanel } from '../types'
+import type { AncestorInfo, ElementColors, SyncFromContent, SyncFromPanel } from '../types'
 
 // Élément actuellement sélectionné + chaîne de ses ancêtres (fil d'ariane), gardés hors de
 // tout state React/store (c'est le content script qui a l'accès DOM réel ; la fenêtre devpanel
@@ -33,6 +33,33 @@ function computeAncestors(el: Element): Element[] {
     current = current.parentElement
   }
   return chain
+}
+
+function isTransparent(color: string): boolean {
+  const m = /rgba\([^)]+,\s*([\d.]+)\)/.exec(color)
+  return color === 'transparent' || (m != null && Number(m[1]) === 0)
+}
+
+/** Couleur de fond effective : remonte les ancêtres tant que `background-color` est
+ * transparent, pour refléter le fond réellement visible derrière l'élément plutôt qu'un
+ * `rgba(0,0,0,0)` inutile au calcul de contraste. Blanc par défaut si toute la chaîne est
+ * transparente (cas `<body>` sans fond explicite, comportement de rendu par défaut). */
+function computeEffectiveColors(el: Element): ElementColors {
+  const style = getComputedStyle(el)
+  let bg = style.backgroundColor
+  let current: Element | null = el
+  while (current && isTransparent(bg)) {
+    current = current.parentElement
+    if (!current) break
+    bg = getComputedStyle(current).backgroundColor
+  }
+  if (!bg || isTransparent(bg)) bg = 'rgb(255, 255, 255)'
+  return {
+    color: style.color,
+    backgroundColor: bg,
+    fontSize: parseFloat(style.fontSize),
+    bold: Number(style.fontWeight) >= 700,
+  }
 }
 
 function send(message: SyncFromContent) {
@@ -71,7 +98,19 @@ function setSelection(el: Element | null) {
     send({ type: 'ELEMENT_CLEARED' })
     return
   }
-  send({ type: 'ELEMENT_SELECTED', tagName: el.tagName.toLowerCase(), classes: readClasses(el), ancestors: ancestorElements.map(describeAncestor) })
+  send({
+    type: 'ELEMENT_SELECTED',
+    tagName: el.tagName.toLowerCase(),
+    classes: readClasses(el),
+    ancestors: ancestorElements.map(describeAncestor),
+    colors: computeEffectiveColors(el),
+  })
+}
+
+/** Recalcule les couleurs effectives à chaque changement de classes (une édition peut changer
+ * le texte ET le fond, ou le fond d'un ancêtre remonté par `computeEffectiveColors`). */
+function sendClassesUpdated(el: Element, unsupportedClass?: string | null) {
+  send({ type: 'CLASSES_UPDATED', classes: readClasses(el), unsupportedClass, colors: computeEffectiveColors(el) })
 }
 
 function navigate(direction: 'parent' | 'child' | 'prev' | 'next') {
@@ -99,13 +138,13 @@ function handlePanelMessage(message: SyncFromPanel) {
         if (ensureLiveRule(fullClassName) === 'unsupported') unsupportedClass = fullClassName
       }
       applyClassChange(selectedEl, message.request)
-      send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl), unsupportedClass })
+      sendClassesUpdated(selectedEl, unsupportedClass)
       return
     }
     case 'REMOVE_CLASS': {
       if (!selectedEl) return
       removeRawClass(selectedEl, message.rawClass)
-      send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl) })
+      sendClassesUpdated(selectedEl)
       return
     }
     case 'TOGGLE_CLASS': {
@@ -113,7 +152,7 @@ function handlePanelMessage(message: SyncFromPanel) {
       const current = readClasses(selectedEl)
       if (current.includes(message.rawClass)) removeRawClass(selectedEl, message.rawClass)
       else addRawClass(selectedEl, message.rawClass)
-      send({ type: 'CLASSES_UPDATED', classes: readClasses(selectedEl) })
+      sendClassesUpdated(selectedEl)
       return
     }
     case 'RUN_CSS_SCAN': {
@@ -149,6 +188,7 @@ export function setupSync(opts: SetupSyncOptions) {
         tagName: selectedEl.tagName.toLowerCase(),
         classes: readClasses(selectedEl),
         ancestors: ancestorElements.map(describeAncestor),
+        colors: computeEffectiveColors(selectedEl),
       })
     }
 

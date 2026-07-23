@@ -43,6 +43,11 @@ export interface GeneratedClass {
   negative: boolean
 }
 
+/** `GeneratedClass` sans `category`/`subcategory` (affichage/regroupement uniquement, cf.
+ * devpanel) — dataset embarqué dans le content script (class-parser.ts, live-style.ts), qui
+ * n'a besoin que des champs servant à la reconnaissance/synthèse de classes. */
+export type SlimGeneratedClass = Omit<GeneratedClass, 'category' | 'subcategory'>
+
 // --- Parsing / diff de classes ---
 
 export interface ParsedClass {
@@ -106,11 +111,23 @@ export interface AncestorInfo {
  * sans stratégie détectable, variant non géré...). */
 export type LiveRuleStatus = 'has-real-rule' | 'synthesized' | 'unsupported'
 
+/** Couleurs effectives de l'élément sélectionné (`getComputedStyle`, dans n'importe quelle
+ * syntaxe — `rgb()` ou `oklch()`/`lab()` selon le navigateur et l'origine de la couleur ;
+ * `core/contrast.ts` sait convertir les deux). Sert au contrôle de contraste. `backgroundColor`
+ * remonte les ancêtres si transparente, pour refléter le fond réellement visible derrière le
+ * texte plutôt qu'un `transparent` inutile. */
+export interface ElementColors {
+  color: string
+  backgroundColor: string
+  fontSize: number
+  bold: boolean
+}
+
 /** Messages envoyés par le content script vers la fenêtre devpanel connectée. */
 export type SyncFromContent =
-  | { type: 'ELEMENT_SELECTED'; tagName: string; classes: string[]; ancestors: AncestorInfo[] }
+  | { type: 'ELEMENT_SELECTED'; tagName: string; classes: string[]; ancestors: AncestorInfo[]; colors: ElementColors }
   | { type: 'ELEMENT_CLEARED' }
-  | { type: 'CLASSES_UPDATED'; classes: string[]; unsupportedClass?: string | null }
+  | { type: 'CLASSES_UPDATED'; classes: string[]; unsupportedClass?: string | null; colors: ElementColors }
   | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[]; detectedPrefix: string | null }
 
 /** Direction de navigation clavier, relative à l'élément sélectionné. */

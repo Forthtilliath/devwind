@@ -3,6 +3,7 @@ import Popover from './Popover'
 import ValuePickerList from './ValuePickerList'
 import SideIcon, { hasSideIcon } from './SideIcon'
 import { formatSuffix } from '../format'
+import { useDevPanelStore } from '../store/useDevPanelStore'
 import type { GeneratedClass, TaxonomyEntry } from '../../types'
 
 interface PropertyRowProps {
@@ -29,6 +30,7 @@ function withVariants(variants: string[], className: string): string {
 export default function PropertyRow({ entry, classes, activeClasses, variants, onApply, onApplyArbitrary }: PropertyRowProps) {
   const prefixes = entry.prefixes
   const [activePrefix, setActivePrefix] = useState(prefixes[0])
+  const elementColors = useDevPanelStore((s) => s.elementColors)
 
   if (entry.type === 'static') {
     return (
@@ -53,6 +55,16 @@ export default function PropertyRow({ entry, classes, activeClasses, variants, o
   const itemsForPrefix = classes.filter((c) => c.prefix === activePrefix)
   const activeItem = itemsForPrefix.find((c) => activeClasses.includes(withVariants(variants, c.className))) ?? null
   const isColor = entry.type === 'color'
+
+  // Aperçu de contraste WCAG par candidat (uniquement Background/Texte, cf. demande explicite
+  // "tester des couleurs avant de s'engager") : compare contre l'AUTRE couleur actuelle de
+  // l'élément (le texte quand on choisit un fond, et inversement).
+  const contrastPreview =
+    elementColors && entry.id === 'backgroundColor'
+      ? { against: elementColors.color, role: 'background' as const, fontSize: elementColors.fontSize, bold: elementColors.bold }
+      : elementColors && entry.id === 'textColor'
+        ? { against: elementColors.backgroundColor, role: 'foreground' as const, fontSize: elementColors.fontSize, bold: elementColors.bold }
+        : undefined
 
   return (
     <div className="devwind-row">
@@ -94,6 +106,7 @@ export default function PropertyRow({ entry, classes, activeClasses, variants, o
             showSwatch={isColor}
             activeClassName={activeItem?.className ?? null}
             labelFor={formatSuffix}
+            contrastPreview={contrastPreview}
             onPick={(item) => {
               onApply(item)
               close()

@@ -8,6 +8,7 @@ import VariantToolbar from './components/VariantToolbar'
 import Breadcrumb from './components/Breadcrumb'
 import RecentClasses from './components/RecentClasses'
 import Popover from './components/Popover'
+import ContrastBadge from './components/ContrastBadge'
 import { searchClasses } from './data'
 import { loadTheme, setTheme, NEXT_THEME, THEME_ICON } from './theme'
 import type { ThemePreference } from './theme'
@@ -50,6 +51,7 @@ export default function DevPanel() {
   const toggleLocked = useDevPanelStore((s) => s.toggleLocked)
   const recentClasses = useDevPanelStore((s) => s.recentClasses)
   const recordRecent = useDevPanelStore((s) => s.recordRecent)
+  const elementColors = useDevPanelStore((s) => s.elementColors)
 
   useEffect(() => {
     void loadTheme().then(setThemeState)
@@ -170,6 +172,17 @@ export default function DevPanel() {
       ) : (
         <>
           <Breadcrumb ancestors={ancestors} tagName={tagName} onSelectAncestor={selectAncestor} />
+          {elementColors && (
+            <div className="devwind-contrast-row">
+              <span className="devwind-contrast-row__label">Contraste texte/fond :</span>
+              <ContrastBadge
+                foreground={elementColors.color}
+                background={elementColors.backgroundColor}
+                fontSize={elementColors.fontSize}
+                bold={elementColors.bold}
+              />
+            </div>
+          )}
           <VariantToolbar activeVariants={activeVariants} onToggle={toggleVariant} />
           <RecentClasses items={recentClasses} activeClasses={activeClasses} variants={activeVariants} onApply={applyItem} />
           <SearchBar value={search} onChange={setSearch} />

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
-import type { AncestorInfo, ClassChangeRequest, CssScanResult, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
+import type { AncestorInfo, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
 
 function getTargetTabId(): number {
   const raw = new URLSearchParams(window.location.search).get('tabId')
@@ -38,6 +38,9 @@ interface DevPanelState {
   /** Dernières valeurs choisies via un picker (pas les valeurs arbitraires), les plus récentes
    * en premier — persisté dans chrome.storage.local, partagé entre onglets/sessions. */
   recentClasses: GeneratedClass[]
+  /** Couleurs effectives (texte/fond réels, `getComputedStyle`) de l'élément sélectionné —
+   * sert au contrôle de contraste WCAG (cf. core/contrast.ts). */
+  elementColors: ElementColors | null
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -67,6 +70,7 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   locked: false,
   unsupportedClasses: [],
   recentClasses: [],
+  elementColors: null,
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -82,16 +86,22 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     p.onMessage.addListener((message: SyncFromContent) => {
       switch (message.type) {
         case 'ELEMENT_SELECTED':
-          set({ tagName: message.tagName, activeClasses: message.classes, ancestors: message.ancestors, unsupportedClasses: [] })
+          set({
+            tagName: message.tagName,
+            activeClasses: message.classes,
+            ancestors: message.ancestors,
+            unsupportedClasses: [],
+            elementColors: message.colors,
+          })
           return
         case 'ELEMENT_CLEARED':
-          set({ tagName: null, activeClasses: [], ancestors: [], unsupportedClasses: [] })
+          set({ tagName: null, activeClasses: [], ancestors: [], unsupportedClasses: [], elementColors: null })
           return
         case 'CLASSES_UPDATED':
           set((s) => {
             const kept = s.unsupportedClasses.filter((c) => message.classes.includes(c))
             if (message.unsupportedClass && !kept.includes(message.unsupportedClass)) kept.push(message.unsupportedClass)
-            return { activeClasses: message.classes, unsupportedClasses: kept }
+            return { activeClasses: message.classes, unsupportedClasses: kept, elementColors: message.colors }
           })
           return
         case 'CUSTOM_SCAN_RESULT':

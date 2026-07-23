@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
+import ContrastBadge from './ContrastBadge'
 import type { GeneratedClass } from '../../types'
 
 interface ArbitraryConfig {
   placeholder: string
   onSubmit: (value: string) => void
+}
+
+interface ContrastPreviewConfig {
+  /** Couleur (déjà `rgb()`/normalisable) contre laquelle comparer chaque candidat. */
+  against: string
+  /** Le candidat joue le rôle de texte (`textColor`) ou de fond (`backgroundColor`). */
+  role: 'foreground' | 'background'
+  fontSize: number
+  bold: boolean
 }
 
 interface ValuePickerListProps {
@@ -13,6 +23,9 @@ interface ValuePickerListProps {
   labelFor: (item: GeneratedClass) => string
   onPick: (item: GeneratedClass) => void
   arbitrary?: ArbitraryConfig
+  /** Aperçu de contraste WCAG par candidat (uniquement pour Background/Texte) — teste les
+   * couleurs "avant de s'engager", cf. demande explicite. */
+  contrastPreview?: ContrastPreviewConfig
 }
 
 /**
@@ -21,7 +34,7 @@ interface ValuePickerListProps {
  * instantanément un mur de 242 couleurs) — pas besoin de deux composants dédiés bespoke.
  * Navigable au clavier (↑/↓ pour déplacer la surbrillance, Entrée pour choisir).
  */
-export default function ValuePickerList({ items, showSwatch, activeClassName, labelFor, onPick, arbitrary }: ValuePickerListProps) {
+export default function ValuePickerList({ items, showSwatch, activeClassName, labelFor, onPick, arbitrary, contrastPreview }: ValuePickerListProps) {
   const [query, setQuery] = useState('')
   const [arbitraryValue, setArbitraryValue] = useState('')
   const [highlighted, setHighlighted] = useState(0)
@@ -77,7 +90,16 @@ export default function ValuePickerList({ items, showSwatch, activeClassName, la
           >
             {showSwatch && <span className="devwind-vpl__swatch" style={{ background: item.themeToken ?? undefined }} />}
             <span className="devwind-vpl__name">{labelFor(item)}</span>
-            {!showSwatch && item.themeToken && <span className="devwind-vpl__token">{item.themeToken}</span>}
+            {contrastPreview && item.themeToken && (
+              <ContrastBadge
+                foreground={contrastPreview.role === 'foreground' ? item.themeToken : contrastPreview.against}
+                background={contrastPreview.role === 'background' ? item.themeToken : contrastPreview.against}
+                fontSize={contrastPreview.fontSize}
+                bold={contrastPreview.bold}
+                compact
+              />
+            )}
+            {!contrastPreview && !showSwatch && item.themeToken && <span className="devwind-vpl__token">{item.themeToken}</span>}
           </button>
         ))}
         {filtered.length === 0 && <p className="devwind-vpl__empty">Aucun résultat</p>}
