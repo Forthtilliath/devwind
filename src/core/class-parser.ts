@@ -95,8 +95,20 @@ export function matchTaxonomy(base: string, entries: TaxonomyEntry[] = taxonomy)
         return { entry, prefix, suffix: arbitraryMatch[1], isArbitrary: true, isNegative }
       }
 
-      if (VALID_CLASS_NAMES_BY_ENTRY.get(entry.id)?.has(toClassName(prefix, suffix, isNegative))) {
+      const validNames = VALID_CLASS_NAMES_BY_ENTRY.get(entry.id)
+      if (validNames?.has(toClassName(prefix, suffix, isNegative))) {
         return { entry, prefix, suffix, isArbitrary: false, isNegative }
+      }
+
+      // Modificateur d'opacité (`bg-red-500/80`) : le dataset généré ne contient que les
+      // classes de base sans `/NN`, donc on retente sans ce suffixe avant de conclure à
+      // "non reconnu" — sinon une classe couleur avec opacité n'est jamais reconnue comme
+      // "même slot" par class-diff, et l'ancienne classe n'est jamais retirée au clic.
+      if (entry.type === 'color') {
+        const opacityMatch = /^(.+)\/\d{1,3}$/.exec(suffix)
+        if (opacityMatch && validNames?.has(toClassName(prefix, opacityMatch[1], isNegative))) {
+          return { entry, prefix, suffix, isArbitrary: false, isNegative }
+        }
       }
     }
   }
