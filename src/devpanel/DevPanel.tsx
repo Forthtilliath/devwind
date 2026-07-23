@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useDevPanelStore } from './store/useDevPanelStore'
 import ClassChip from './components/ClassChip'
 import SearchBar from './components/SearchBar'
@@ -12,6 +13,7 @@ function arbitraryClassName(prefix: string, value: string): string {
 }
 
 export default function DevPanel() {
+  const [copied, setCopied] = useState(false)
   const connectionState = useDevPanelStore((s) => s.connectionState)
   const tagName = useDevPanelStore((s) => s.tagName)
   const activeClasses = useDevPanelStore((s) => s.activeClasses)
@@ -41,14 +43,27 @@ export default function DevPanel() {
     applyChange({ taxonomyId, prefix, variants: activeVariants, newBase: arbitraryClassName(prefix, value) })
   }
 
+  async function copyClasses() {
+    await navigator.clipboard.writeText(activeClasses.join(' '))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1200)
+  }
+
   return (
     <div className="devwind-panel">
       <header className="devwind-panel__header">
         <span className="devwind-panel__title">DevWind</span>
         {tagName && (
-          <span className="devwind-panel__count">
-            &lt;{tagName}&gt; · {activeClasses.length} classes
-          </span>
+          <div className="devwind-panel__header-right">
+            <span className="devwind-panel__count">
+              &lt;{tagName}&gt; · {activeClasses.length} classes
+            </span>
+            {activeClasses.length > 0 && (
+              <button type="button" className="devwind-copy-btn" onClick={() => void copyClasses()}>
+                {copied ? 'Copié !' : 'Copier'}
+              </button>
+            )}
+          </div>
         )}
       </header>
 

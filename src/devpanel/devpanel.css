@@ -44,6 +44,26 @@ body {
   flex-shrink: 0;
 }
 
+.devwind-panel__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.devwind-copy-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #d4d4d8;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.devwind-copy-btn:hover {
+  border-color: #6366f1;
+}
+
 .devwind-panel__title {
   font-weight: 600;
   color: #a5b4fc;
