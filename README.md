@@ -1,32 +1,63 @@
-# React + TypeScript + Vite
+# DevWind
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Extension Chrome pour éditer visuellement les classes Tailwind CSS de n'importe quel site, en direct dans le navigateur — dans l'esprit de l'ancienne extension Gimli (discontinuée), avec une meilleure organisation des classes et la prise en charge des classes custom du site.
 
-Currently, two official plugins are available:
+Cible **Tailwind CSS v4** (thème par défaut en OKLCH, variables CSS `@theme`, syntaxe de préfixe `tw:`...).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Fonctionnalités
 
-## React Compiler
+- **Picker visuel** : clic sur l'icône ou `Ctrl+Shift+K` pour activer le picker, clic sur un élément de la page pour sélectionner ce qu'on veut éditer. Fil d'ariane des ancêtres, navigation clavier (flèches), mode verrouillé pour interagir avec la page sans perdre la sélection.
+- **Panneau dans une fenêtre séparée**, déplaçable indépendamment (utile sur un second écran) : classes regroupées par catégorie (couleurs, spacing, typographie, bordures, effets, filtres, transitions, interactivité...), recherche transversale, valeurs récentes, export en texte brut ou JSX.
+- **Synthèse CSS live** : une classe choisie dans le panneau produit un effet visuel immédiat même si elle est absente du CSS déjà chargé sur la page (build de prod purgé) — variants `hover:`, `dark:`, breakpoints, `group-*`/`peer-*`, `aria-*`, `has-*`, `data-*`, opacité de couleur (`bg-red-500/80`), propriétés composites (transform/filter/backdrop-filter) synthétisées fidèlement au vrai moteur v4.
+- **Détection du thème réel du site** : les classes synthétisées référencent les vraies variables CSS `@theme` du site (avec repli sur notre thème par défaut), y compris si le site utilise un préfixe Tailwind custom (`tw:bg-red-500` → `--tw-color-red-500`).
+- **Navigateur de variables de thème** : liste les `--color-*`/`--radius-*`/`--spacing`/etc. réellement définis sur `:root` du site.
+- **Scan CSS** : détecte les classes custom (non-Tailwind) utilisées sur la page en parsant les feuilles de style chargées (avec repli `fetch()` pour le cross-origin autorisant CORS), re-scanne automatiquement si le site charge du CSS dynamiquement.
+- **Contrôle de contraste WCAG** : ratio texte/fond de l'élément sélectionné (AA/AAA), aperçu du contraste par couleur candidate avant de l'appliquer.
+- Thème clair/sombre du panneau, raccourcis clavier, indicateur de classe non synthétisable.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Détail complet des fonctionnalités et idées futures : [UPGRADES.md](UPGRADES.md).
 
-## Expanding the Oxlint configuration
+## Installation (développement)
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Puis dans Chrome : `chrome://extensions` → activer le *mode développeur* → *Charger l'extension non empaquetée* → sélectionner le dossier `dist/`.
+
+## Utilisation
+
+1. Clic sur l'icône DevWind (ou `Ctrl+Shift+K`) sur la page à éditer : ouvre la fenêtre du panneau et active le picker.
+2. Clic sur un élément de la page pour l'éditer.
+3. Modifier ses classes depuis le panneau — les changements s'appliquent en direct sur la page.
+
+## Développement
+
+```sh
+npm run dev     # build en mode watch (HMR pour le panneau)
+npm run lint    # oxlint
+npm run build   # build de production dans dist/
+```
+
+Le dataset de classes (`src/data/generated/`) est régénéré automatiquement avant chaque build (`npm run generate:tw-data`) à partir du thème par défaut Tailwind v4 croisé avec la taxonomie éditée à la main (`src/data/taxonomy.ts`) — jamais de classe tapée en dur.
+
+### Structure
+
+- `src/core/` — logique indépendante du DOM/React : parsing de classes, diff, synthèse CSS live, scan CSS, contraste WCAG.
+- `src/content/` — content script injecté à la demande sur la page éditée.
+- `src/devpanel/` — l'interface React du panneau (fenêtre séparée).
+- `src/background/` — service worker (activation, raccourcis).
+- `src/data/taxonomy.ts` — la seule table éditée à la main ; `scripts/generate-tailwind-data.ts` en dérive le dataset complet des classes.
+
+### Tests
+
+Suite e2e Playwright, extension chargée dans un vrai Chromium :
+
+```sh
+npm run test:e2e   # build un dist-test/ dédié, puis lance les tests
+```
+
+Le build de test (`npm run build:test`) diffère du build de production sur deux points seulement, tous deux absents en production (vérifié : éliminés au build par Vite via `import.meta.env.MODE`) :
+- un hook (`self.__devwindTestToggle`) pour ouvrir le panneau sans dépendre d'un geste utilisateur, que Playwright ne peut pas simuler de façon fiable ;
+- `host_permissions` sur `http://localhost/*`, pour que l'injection du content script marche sans ce même geste.
