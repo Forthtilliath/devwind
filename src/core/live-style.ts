@@ -1,7 +1,7 @@
 import { taxonomy } from '../data/taxonomy'
 import generatedClasses from '../data/generated/tailwind-classes.json'
 import { hasRuleForClass } from './css-scanner'
-import type { GeneratedClass } from '../types'
+import type { GeneratedClass, LiveRuleStatus, TaxonomyEntry } from '../types'
 
 const GENERATED_BY_CLASSNAME = new Map<string, GeneratedClass>()
 for (const c of generatedClasses as GeneratedClass[]) GENERATED_BY_CLASSNAME.set(c.className, c)
@@ -41,49 +41,88 @@ function cssEscape(className: string): string {
   return className.replace(/([:/[\].%#])/g, '\\$1')
 }
 
-// --- Propriétés composites (transform / filter / backdrop-filter) ---
+// --- Valeurs : variables de thème v4 + multiplicateur spacing ---
 //
-// Tailwind combine plusieurs classes indépendantes sur une même propriété via des variables
-// CSS partagées (ex. `scale-105` et `rotate-45` doivent toutes les deux affecter `transform`
-// sans s'écraser). Chaque classe composite pose SA variable ET réaffirme la formule complète
-// de la propriété partagée — exactement le CSS que Tailwind génère lui-même, ce qui permet à
-// n'importe quelle combinaison de classes de fonctionner par cascade (peu importe laquelle
-// "gagne" la déclaration `transform`/`filter`, elles calculent toutes la même formule à partir
-// des mêmes variables). Fallback (`var(--x, defaut)`) dans chaque référence pour rester correct
-// même sur un site sans preflight Tailwind (variables jamais initialisées).
-function transformFormula(): string {
-  return (
-    'translate(var(--tw-translate-x, 0), var(--tw-translate-y, 0)) ' +
-    'rotate(var(--tw-rotate, 0)) skewX(var(--tw-skew-x, 0)) skewY(var(--tw-skew-y, 0)) ' +
-    'scaleX(var(--tw-scale-x, 1)) scaleY(var(--tw-scale-y, 1))'
-  )
+// Vérifié en compilant du vrai CSS avec @tailwindcss/cli v4.3.3 (pas deviné) : les utilitaires
+// v4 référencent de vraies variables CSS `@theme` pour les échelles à jetons NOMMÉS
+// (`.bg-red-500 { background-color: var(--color-red-500) }`, `.rounded-lg { border-radius:
+// var(--radius-lg) }`), mais inlinent littéralement les échelles purement numériques (opacity,
+// scale, rotate, brightness...). En référençant nous aussi ces mêmes variables (avec notre
+// valeur par défaut en fallback CSS natif), on hérite automatiquement de la vraie valeur du
+// site s'il définit cette classe ailleurs sur la page — pas besoin d'un scan de détection
+// séparé, le fallback `var(x, y)` fait le travail tout seul.
+const THEME_VAR_PREFIX: Partial<Record<string, string>> = {
+  backgroundColor: '--color-',
+  textColor: '--color-',
+  borderColor: '--color-',
+  ringColor: '--color-',
+  divideColor: '--color-',
+  accentColor: '--color-',
+  borderRadius: '--radius-',
+  blur: '--blur-',
+  backdropBlur: '--blur-', // même espace de noms que `blur` (vérifié : backdrop-blur-md référence aussi --blur-md)
+  fontSize: '--text-',
+  fontWeight: '--font-weight-',
+  transitionTimingFunction: '--ease-',
+  animation: '--animate-',
 }
 
-const FILTER_VARS = [
-  '--tw-blur',
-  '--tw-brightness',
-  '--tw-contrast',
-  '--tw-grayscale',
-  '--tw-hue-rotate',
-  '--tw-invert',
-  '--tw-saturate',
-  '--tw-sepia',
-]
+function themeVarValue(taxonomyId: string, suffix: string, fallback: string): string {
+  const prefix = THEME_VAR_PREFIX[taxonomyId]
+  if (!prefix) return fallback
+  const varName = suffix ? `${prefix}${suffix}` : prefix.slice(0, -1) // forme nue (DEFAULT) : pas de tiret final
+  return `var(${varName}, ${fallback})`
+}
+
+/** Entrées dont v4 multiplie une variable `--spacing` partagée (`calc(var(--spacing) * N)`)
+ * plutôt que d'inliner une valeur par palier de thème — vérifié pour padding/margin/gap/
+ * width/height/translate. Seulement pour un suffixe purement numérique : les clés spéciales
+ * (`px`, `full`, `auto`, `1/2`...) restent des littéraux (vérifié aussi, ex. `p-px` -> `1px`
+ * littéral, `w-1/2` -> `calc(1 / 2 * 100%)` sans rapport avec `--spacing`). */
+const SPACING_MULTIPLIED = new Set(['padding', 'margin', 'gap', 'width', 'minWidth', 'maxWidth', 'height', 'minHeight', 'maxHeight', 'translate'])
+const DEFAULT_SPACING = '0.25rem'
+
+function spacingCalc(suffix: string, negative: boolean): string | null {
+  if (!/^\d+(\.\d+)?$/.test(suffix)) return null
+  return `calc(var(--spacing, ${DEFAULT_SPACING}) * ${negative ? '-' : ''}${suffix})`
+}
+
+function extractSuffix(classNameWithSign: string, prefix: string, negative: boolean): string {
+  const withoutSign = negative ? classNameWithSign.slice(1) : classNameWithSign
+  return prefix ? withoutSign.slice(prefix.length + 1) : withoutSign
+}
+
+/** Calcule la valeur CSS d'une classe générée (hors modificateur d'opacité, géré à part) :
+ * multiplicateur spacing, variable de thème nommée avec fallback, ou littéral bundlé tel quel. */
+function computeValue(entry: TaxonomyEntry, generated: GeneratedClass, suffix: string): string {
+  const literal = generated.negative ? `-${generated.themeToken}` : (generated.themeToken as string)
+  if (SPACING_MULTIPLIED.has(entry.id)) {
+    return spacingCalc(suffix, generated.negative) ?? literal
+  }
+  return themeVarValue(entry.id, suffix, literal)
+}
+
+// --- Propriétés composites (scale / translate / skew / filter / backdrop-filter) ---
+//
+// Tailwind combine plusieurs classes indépendantes sur une même propriété via des variables CSS
+// partagées (ex. `scale-105` et `skew-y-3` doivent affecter leurs propriétés respectives sans
+// s'écraser si une troisième classe les recombine). Chaque classe composite pose SA variable ET
+// réaffirme la formule complète de la propriété partagée — exactement le CSS que Tailwind génère
+// lui-même. Fallback (`var(--x, defaut)`) dans chaque référence pour rester correct même sur un
+// site sans preflight Tailwind. NOTE v4 (vérifié) : `rotate`/`scale`/`translate` sont maintenant
+// des propriétés CSS natives séparées (plus un seul `transform` composite comme en v3) — seul
+// `skew` reste sur `transform` (CSS n'a pas de propriété `skew` native). `rotate` n'a donc plus
+// besoin d'être composite du tout (voir son entrée directe dans taxonomy.ts, propriété `rotate`).
+function transformFormula(): string {
+  return 'var(--tw-skew-x,) var(--tw-skew-y,)'
+}
+
+const FILTER_VARS = ['--tw-blur', '--tw-brightness', '--tw-contrast', '--tw-grayscale', '--tw-hue-rotate', '--tw-invert', '--tw-saturate', '--tw-sepia', '--tw-drop-shadow']
 function filterFormula(): string {
   return FILTER_VARS.map((v) => `var(${v},)`).join(' ')
 }
 
-const BACKDROP_FILTER_VARS = [
-  '--tw-backdrop-blur',
-  '--tw-backdrop-brightness',
-  '--tw-backdrop-contrast',
-  '--tw-backdrop-grayscale',
-  '--tw-backdrop-hue-rotate',
-  '--tw-backdrop-invert',
-  '--tw-backdrop-opacity',
-  '--tw-backdrop-saturate',
-  '--tw-backdrop-sepia',
-]
+const BACKDROP_FILTER_VARS = ['--tw-backdrop-blur', '--tw-backdrop-brightness', '--tw-backdrop-contrast', '--tw-backdrop-grayscale', '--tw-backdrop-hue-rotate', '--tw-backdrop-invert', '--tw-backdrop-opacity', '--tw-backdrop-saturate', '--tw-backdrop-sepia']
 function backdropFilterFormula(): string {
   return BACKDROP_FILTER_VARS.map((v) => `var(${v},)`).join(' ')
 }
@@ -91,22 +130,21 @@ function backdropFilterFormula(): string {
 interface CompositeSpec {
   /** Variables CSS que CE préfixe pose (2 pour `scale` bare : scale-x ET scale-y). */
   cssVars: string[]
-  /** Enrobe la valeur brute dans la fonction filtre attendue (`blur(4px)`), ou identité
-   * pour les transforms (la fonction est déjà dans la formule partagée). */
+  /** Enrobe la valeur dans la fonction attendue (`skewX(3deg)`), ou identité si la formule
+   * partagée utilise déjà la valeur brute (`scale`/`translate`, propriétés natives). */
   wrap: (value: string) => string
   property: string
   formula: () => string
 }
 
 const COMPOSITE_BY_PREFIX: Record<string, CompositeSpec> = {
-  scale: { cssVars: ['--tw-scale-x', '--tw-scale-y'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'scale-x': { cssVars: ['--tw-scale-x'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'scale-y': { cssVars: ['--tw-scale-y'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  rotate: { cssVars: ['--tw-rotate'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'translate-x': { cssVars: ['--tw-translate-x'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'translate-y': { cssVars: ['--tw-translate-y'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'skew-x': { cssVars: ['--tw-skew-x'], wrap: (v) => v, property: 'transform', formula: transformFormula },
-  'skew-y': { cssVars: ['--tw-skew-y'], wrap: (v) => v, property: 'transform', formula: transformFormula },
+  scale: { cssVars: ['--tw-scale-x', '--tw-scale-y'], wrap: (v) => v, property: 'scale', formula: () => 'var(--tw-scale-x, 1) var(--tw-scale-y, 1)' },
+  'scale-x': { cssVars: ['--tw-scale-x'], wrap: (v) => v, property: 'scale', formula: () => 'var(--tw-scale-x, 1) var(--tw-scale-y, 1)' },
+  'scale-y': { cssVars: ['--tw-scale-y'], wrap: (v) => v, property: 'scale', formula: () => 'var(--tw-scale-x, 1) var(--tw-scale-y, 1)' },
+  'translate-x': { cssVars: ['--tw-translate-x'], wrap: (v) => v, property: 'translate', formula: () => 'var(--tw-translate-x, 0) var(--tw-translate-y, 0)' },
+  'translate-y': { cssVars: ['--tw-translate-y'], wrap: (v) => v, property: 'translate', formula: () => 'var(--tw-translate-x, 0) var(--tw-translate-y, 0)' },
+  'skew-x': { cssVars: ['--tw-skew-x'], wrap: (v) => `skewX(${v})`, property: 'transform', formula: transformFormula },
+  'skew-y': { cssVars: ['--tw-skew-y'], wrap: (v) => `skewY(${v})`, property: 'transform', formula: transformFormula },
 
   blur: { cssVars: ['--tw-blur'], wrap: (v) => (v ? `blur(${v})` : ''), property: 'filter', formula: filterFormula },
   brightness: { cssVars: ['--tw-brightness'], wrap: (v) => `brightness(${v})`, property: 'filter', formula: filterFormula },
@@ -129,15 +167,19 @@ const COMPOSITE_BY_PREFIX: Record<string, CompositeSpec> = {
 }
 
 function compositeDeclarations(spec: CompositeSpec, value: string): string[] {
-  return [...spec.cssVars.map((v) => `${v}: ${spec.wrap(value)}`), `${spec.property}: ${spec.formula()}`]
+  const varDecls = spec.cssVars.map((v) => `${v}: ${spec.wrap(value)}`)
+  // -webkit-backdrop-filter en plus (vérifié dans la sortie réelle v4) : coût nul, meilleure fidélité.
+  const propDecls = spec.property === 'backdrop-filter' ? [`-webkit-backdrop-filter: ${spec.formula()}`, `${spec.property}: ${spec.formula()}`] : [`${spec.property}: ${spec.formula()}`]
+  return [...varDecls, ...propDecls]
 }
 
 /**
  * Détermine les déclarations CSS (`propriété: valeur`) d'une classe "base" (sans variants),
  * à partir de la taxonomie + du dataset généré (classes connues) ou en parsant directement
- * une valeur arbitraire (`bg-[#ff0000]`, non présente dans le dataset généré). Gère aussi le
- * modificateur d'opacité (`bg-red-500/80`, `bg-[#ff0000]/50`) et les propriétés composites
- * (transform/filter/backdrop-filter, cf. COMPOSITE_BY_PREFIX).
+ * une valeur arbitraire (`bg-[#ff0000]`, non présente dans le dataset généré — toujours
+ * littérale, comme le vrai Tailwind). Gère aussi le modificateur d'opacité (`bg-red-500/80`,
+ * `bg-[#ff0000]/50`) et les propriétés composites (scale/translate/skew/filter/backdrop-filter,
+ * cf. COMPOSITE_BY_PREFIX).
  */
 function declarationsFor(base: string): string[] | null {
   const opacitySplit = /^(.*)\/(\d{1,3})$/.exec(base)
@@ -157,7 +199,8 @@ function declarationsFor(base: string): string[] | null {
     }
 
     if (!generated.themeToken) return null
-    let value = generated.negative ? `-${generated.themeToken}` : generated.themeToken
+    const suffix = extractSuffix(withoutOpacity, generated.prefix, generated.negative)
+    let value = computeValue(entry, generated, suffix)
     if (opacityPct != null && entry.type === 'color') {
       value = `color-mix(in srgb, ${value} ${opacityPct}%, transparent)`
     }
@@ -167,7 +210,10 @@ function declarationsFor(base: string): string[] | null {
 
     if (entry.id === 'fontSize') {
       const decls = [`font-size: ${value}`]
-      if (generated.secondaryValue) decls.push(`line-height: ${generated.secondaryValue}`)
+      if (generated.secondaryValue) {
+        const lhValue = suffix ? `var(--text-${suffix}--line-height, ${generated.secondaryValue})` : generated.secondaryValue
+        decls.push(`line-height: ${lhValue}`)
+      }
       return decls
     }
 
@@ -306,19 +352,19 @@ function wrapMedia(rule: string, queries: string[]): string {
  * `:where(.dark, .dark *)`) plutôt que de deviner la stratégie du site (fiable, sans
  * heuristique DOM) : si le site n'utilise pas Tailwind dark mode, les deux restent inertes.
  */
-export function ensureLiveRule(fullClassName: string): void {
-  if (injected.has(fullClassName)) return
-  if (hasRuleForClass(fullClassName, document, STYLE_ELEMENT_ID)) return
+export function ensureLiveRule(fullClassName: string): LiveRuleStatus {
+  if (injected.has(fullClassName)) return 'synthesized'
+  if (hasRuleForClass(fullClassName, document, STYLE_ELEMENT_ID)) return 'has-real-rule'
 
   const parts = fullClassName.split(':')
   const base = parts[parts.length - 1]
   const variants = parts.slice(0, -1)
 
   const decls = declarationsFor(base)
-  if (!decls) return
+  if (!decls) return 'unsupported'
 
   const plan = planVariants(variants)
-  if (!plan) return
+  if (!plan) return 'unsupported'
 
   const selector = `${plan.selectorPrefix}.${cssEscape(fullClassName)}${plan.selectorSuffix}`
   const importantDecls = decls.map((d) => `${d} !important`).join('; ')
@@ -335,4 +381,5 @@ export function ensureLiveRule(fullClassName: string): void {
   getStyleEl().appendChild(textNode)
   injected.set(fullClassName, textNode)
   pruneIfNeeded()
+  return 'synthesized'
 }
