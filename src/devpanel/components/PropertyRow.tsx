@@ -7,6 +7,9 @@ interface PropertyRowProps {
   entry: TaxonomyEntry
   classes: GeneratedClass[]
   activeClasses: string[]
+  /** Contexte de variant courant (ex. ['md','hover']) : détermine quel slot est "actif" et
+   * dans quel contexte les nouvelles valeurs choisies s'appliquent. */
+  variants: string[]
   onApply: (item: GeneratedClass) => void
   onApplyArbitrary: (prefix: string, value: string) => void
 }
@@ -17,13 +20,17 @@ function formatSuffix(item: GeneratedClass): string {
   return item.negative ? `-${suffix}` : suffix
 }
 
+function withVariants(variants: string[], className: string): string {
+  return [...variants, className].join(':')
+}
+
 /**
  * Une ligne compacte par propriété (ex. "Background", "Padding") au lieu d'une grille
  * exhaustive toujours dépliée : affiche la valeur active courante, un clic ouvre un popover
  * recherchable pour la changer. Entrées `static` (peu de valeurs) : pills inline, pas de
  * popover — déjà compact avec ≤10 valeurs.
  */
-export default function PropertyRow({ entry, classes, activeClasses, onApply, onApplyArbitrary }: PropertyRowProps) {
+export default function PropertyRow({ entry, classes, activeClasses, variants, onApply, onApplyArbitrary }: PropertyRowProps) {
   const prefixes = entry.prefixes
   const [activePrefix, setActivePrefix] = useState(prefixes[0])
 
@@ -36,7 +43,7 @@ export default function PropertyRow({ entry, classes, activeClasses, onApply, on
             <button
               key={item.className}
               type="button"
-              className={`devwind-pill${activeClasses.includes(item.className) ? ' devwind-pill--active' : ''}`}
+              className={`devwind-pill${activeClasses.includes(withVariants(variants, item.className)) ? ' devwind-pill--active' : ''}`}
               onClick={() => onApply(item)}
             >
               {formatSuffix(item) || item.className}
@@ -48,7 +55,7 @@ export default function PropertyRow({ entry, classes, activeClasses, onApply, on
   }
 
   const itemsForPrefix = classes.filter((c) => c.prefix === activePrefix)
-  const activeItem = itemsForPrefix.find((c) => activeClasses.includes(c.className)) ?? null
+  const activeItem = itemsForPrefix.find((c) => activeClasses.includes(withVariants(variants, c.className))) ?? null
   const isColor = entry.type === 'color'
 
   return (

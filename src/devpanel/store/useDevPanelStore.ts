@@ -21,6 +21,8 @@ interface DevPanelState {
   activeClasses: string[]
   customScan: CssScanResult | null
   search: string
+  /** Contexte de variant courant (ex. ['md','hover']) : appliqué à toute nouvelle édition. */
+  activeVariants: string[]
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -28,6 +30,7 @@ interface DevPanelState {
   toggleClass: (rawClass: string) => void
   runCssScan: () => void
   setSearch: (query: string) => void
+  toggleVariant: (variant: string) => void
 }
 
 function send(message: SyncFromPanel) {
@@ -40,6 +43,7 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   activeClasses: [],
   customScan: null,
   search: '',
+  activeVariants: [],
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -78,4 +82,10 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     send({ type: 'RUN_CSS_SCAN' })
   },
   setSearch: (query) => set({ search: query }),
+  toggleVariant: (variant) =>
+    set((s) => ({
+      activeVariants: s.activeVariants.includes(variant)
+        ? s.activeVariants.filter((v) => v !== variant)
+        : [...s.activeVariants, variant],
+    })),
 }))

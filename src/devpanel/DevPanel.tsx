@@ -3,6 +3,7 @@ import ClassChip from './components/ClassChip'
 import SearchBar from './components/SearchBar'
 import CategoryNav from './components/CategoryNav'
 import CustomClassesSection from './components/CustomClassesSection'
+import VariantToolbar from './components/VariantToolbar'
 import { searchClasses } from './data'
 import type { GeneratedClass } from '../types'
 
@@ -18,6 +19,8 @@ export default function DevPanel() {
   const setSearch = useDevPanelStore((s) => s.setSearch)
   const applyChange = useDevPanelStore((s) => s.applyChange)
   const removeClass = useDevPanelStore((s) => s.removeClass)
+  const activeVariants = useDevPanelStore((s) => s.activeVariants)
+  const toggleVariant = useDevPanelStore((s) => s.toggleVariant)
 
   if (connectionState === 'disconnected') {
     return (
@@ -28,13 +31,14 @@ export default function DevPanel() {
   }
 
   const searchResults = search.trim() ? searchClasses(search) : []
+  const searchActiveName = (className: string) => [...activeVariants, className].join(':')
 
   function applyItem(item: GeneratedClass) {
-    applyChange({ taxonomyId: item.taxonomyId, prefix: item.prefix, variants: [], newBase: item.className })
+    applyChange({ taxonomyId: item.taxonomyId, prefix: item.prefix, variants: activeVariants, newBase: item.className })
   }
 
   function applyArbitrary(taxonomyId: string, prefix: string, value: string) {
-    applyChange({ taxonomyId, prefix, variants: [], newBase: arbitraryClassName(prefix, value) })
+    applyChange({ taxonomyId, prefix, variants: activeVariants, newBase: arbitraryClassName(prefix, value) })
   }
 
   return (
@@ -52,6 +56,7 @@ export default function DevPanel() {
         <p className="devwind-hint">Clique sur un élément de la page pour éditer ses classes.</p>
       ) : (
         <>
+          <VariantToolbar activeVariants={activeVariants} onToggle={toggleVariant} />
           <SearchBar value={search} onChange={setSearch} />
 
           {searchResults.length > 0 ? (
@@ -60,7 +65,7 @@ export default function DevPanel() {
                 <button
                   key={item.className}
                   type="button"
-                  className={`devwind-value${activeClasses.includes(item.className) ? ' devwind-value--active' : ''}${item.category === 'Couleurs' ? ' devwind-value--color' : ''}`}
+                  className={`devwind-value${activeClasses.includes(searchActiveName(item.className)) ? ' devwind-value--active' : ''}${item.category === 'Couleurs' ? ' devwind-value--color' : ''}`}
                   title={`${item.category} / ${item.subcategory ?? ''}`}
                   onClick={() => applyItem(item)}
                 >
@@ -81,7 +86,12 @@ export default function DevPanel() {
                 )}
               </section>
 
-              <CategoryNav activeClasses={activeClasses} onApply={applyItem} onApplyArbitrary={applyArbitrary} />
+              <CategoryNav
+                activeClasses={activeClasses}
+                variants={activeVariants}
+                onApply={applyItem}
+                onApplyArbitrary={applyArbitrary}
+              />
 
               <CustomClassesSection activeClasses={activeClasses} />
             </>

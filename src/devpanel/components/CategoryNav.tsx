@@ -6,13 +6,14 @@ import type { GeneratedClass } from '../../types'
 
 interface CategoryNavProps {
   activeClasses: string[]
+  variants: string[]
   onApply: (item: GeneratedClass) => void
   onApplyArbitrary: (taxonomyId: string, prefix: string, value: string) => void
 }
 
 /** Rail de catégories ; le contenu de chaque catégorie est une liste de PropertyRow
  * (une ligne compacte par propriété) plutôt que des grilles exhaustives dépliées. */
-export default function CategoryNav({ activeClasses, onApply, onApplyArbitrary }: CategoryNavProps) {
+export default function CategoryNav({ activeClasses, variants, onApply, onApplyArbitrary }: CategoryNavProps) {
   const [activeCategory, setActiveCategory] = useState(categoryGroups[0]?.name ?? '')
   const group = categoryGroups.find((g) => g.name === activeCategory)
 
@@ -40,6 +41,7 @@ export default function CategoryNav({ activeClasses, onApply, onApplyArbitrary }
               entry={entry}
               classes={sub.classes}
               activeClasses={activeClasses}
+              variants={variants}
               onApply={onApply}
               onApplyArbitrary={(prefix, value) => onApplyArbitrary(entry.id, prefix, value)}
             />

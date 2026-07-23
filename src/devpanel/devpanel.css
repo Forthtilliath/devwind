@@ -117,6 +117,59 @@ body {
   color: #f87171;
 }
 
+.devwind-variant-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #3f3f46;
+  flex-shrink: 0;
+}
+
+.devwind-variant-toolbar__group {
+  display: flex;
+  gap: 3px;
+}
+
+.devwind-variant-toolbar__custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+
+.devwind-variant-toolbar__custom input {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #e4e4e7;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  width: 130px;
+}
+
+.devwind-variant-pill {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-family: ui-monospace, Menlo, monospace;
+  cursor: pointer;
+}
+
+.devwind-variant-pill:hover {
+  border-color: #6366f1;
+}
+
+.devwind-variant-pill--active {
+  background: #4338ca;
+  border-color: #6366f1;
+  color: white;
+}
+
 .devwind-search {
   margin: 10px 14px;
   padding: 6px 10px;
