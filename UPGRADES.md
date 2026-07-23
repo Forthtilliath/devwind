@@ -21,6 +21,11 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 - **Thème du site pris en compte automatiquement (v4)** — les classes à jetons nommés (couleurs, radius, blur, taille/poids de police, easing, animation) référencent maintenant `var(--color-red-500, <notre-valeur-par-défaut>)` etc. plutôt qu'une valeur littérale : si le site définit réellement cette variable ailleurs sur la page (vrai thème v4), on hérite automatiquement de SA valeur, sinon on retombe sur notre thème par défaut — pas besoin d'un scan de détection séparé, le fallback CSS natif fait le travail. Idem pour `padding`/`margin`/`gap`/`width`/`height`/`translate` qui multiplient une variable `--spacing` partagée (`calc(var(--spacing, 0.25rem) * N)`) comme le vrai moteur v4.
 - **Limite découverte** : si le site configure un préfixe Tailwind (`@import "tailwindcss" prefix(tw)`), v4 préfixe AUSSI les noms de variables (`--tw-color-red-500` au lieu de `--color-red-500`) — notre référence `var(--color-*, ...)` ne matche alors plus rien sur ce site précis, on retombe silencieusement sur notre thème par défaut (dégradation correcte, mais pas de détection de la vraie valeur dans ce cas).
 
+## Accessibilité — ✅ fait
+
+- **Indicateur de contraste WCAG** — pendant l'édition, un badge affiche le ratio texte/fond de l'élément sélectionné (`AA`/`AAA`/✗ selon les seuils WCAG 2.1, texte large pris en compte). Dans les popovers Background/Texte, chaque couleur candidate affiche aussi son ratio en aperçu (comparé à l'AUTRE couleur actuelle de l'élément), avant même de cliquer dessus.
+- **Bug découvert et corrigé en vérifiant la fonctionnalité** : `getComputedStyle` ne renormalise plus une couleur `oklch(...)`/`lab(...)` en `rgb(...)` dans les navigateurs récents — or le thème par défaut Tailwind v4 est entièrement en OKLCH. Le badge se serait tu silencieusement pour la quasi-totalité des couleurs. Corrigé en convertissant via un canvas 2D détaché (`fillStyle` + `getImageData`) plutôt qu'en lisant la sérialisation CSSOM.
+
 ## Édition / historique
 
 - Pas d'undo/redo. Le mécanisme de `ClassChangeResult { before, after }` existe déjà côté `class-diff.ts` mais n'est pas exploité pour empiler un historique.
@@ -56,6 +61,7 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 
 ## Qualité / process
 
+- ~~Dataset content-script alourdi par des champs d'affichage inutiles~~ — `category`/`subcategory` (utilisés seulement par le devpanel pour le regroupement visuel, jamais pour la reconnaissance/synthèse de classes) retirés du JSON embarqué dans le content script via une version allégée dédiée (`tailwind-classes-slim.json`). `content/main.js` passe de ~1,47 Mo à ~929 Ko minifié (~58 Ko gzip).
 - Pas de suite de tests automatisés versionnée dans le repo (les vérifications de cette session ont utilisé des scripts Playwright ad hoc dans le scratchpad, jetables) — un `tests/e2e/` avec Playwright + une page de fixture committée serait plus robuste pour éviter les régressions.
 - Pas d'icônes custom pour l'extension (Chrome affiche l'icône par défaut) — à faire avant une éventuelle publication.
 - Pas de README.
