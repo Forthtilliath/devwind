@@ -13,7 +13,9 @@ interface CategoryNavProps {
 }
 
 const RAIL_WIDTH_STORAGE_KEY = 'devwind-category-rail-width'
-const DEFAULT_RAIL_WIDTH = 108
+// Assez large pour que le plus long libellé ("Transitions & Transforms", ~142px mesuré) tienne
+// sur une seule ligne par défaut, avec une petite marge pour les variations de rendu de police.
+const DEFAULT_RAIL_WIDTH = 150
 const MIN_RAIL_WIDTH = 72
 const MAX_RAIL_WIDTH = 220
 
