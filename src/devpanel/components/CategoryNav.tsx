@@ -3,6 +3,8 @@ import type { MouseEvent as ReactMouseEvent } from 'react'
 import { categoryGroups } from '../data'
 import { taxonomy } from '../../data/taxonomy'
 import PropertyRow from './PropertyRow'
+import { translateCategory } from '../i18n'
+import { useDevPanelStore } from '../store/useDevPanelStore'
 import type { GeneratedClass } from '../../types'
 
 interface CategoryNavProps {
@@ -25,6 +27,7 @@ export default function CategoryNav({ activeClasses, variants, onApply, onApplyA
   const [activeCategory, setActiveCategory] = useState(categoryGroups[0]?.name ?? '')
   const [railWidth, setRailWidth] = useState(DEFAULT_RAIL_WIDTH)
   const [resizing, setResizing] = useState(false)
+  const language = useDevPanelStore((s) => s.language)
   const group = categoryGroups.find((g) => g.name === activeCategory)
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export default function CategoryNav({ activeClasses, variants, onApply, onApplyA
             className={`devwind-category-nav__tab${g.name === activeCategory ? ' devwind-category-nav__tab--active' : ''}`}
             onClick={() => setActiveCategory(g.name)}
           >
-            {g.name}
+            {translateCategory(g.name, language)}
           </button>
         ))}
       </div>

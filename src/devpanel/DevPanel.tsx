@@ -13,6 +13,7 @@ import ContrastBadge from './components/ContrastBadge'
 import ChangeLogPanel from './components/ChangeLogPanel'
 import { searchClasses } from './data'
 import { loadTheme, setTheme, NEXT_THEME, THEME_ICON } from './theme'
+import { translateCategory, translateSubcategory, LANGUAGE_LABEL } from './i18n'
 import type { ThemePreference } from './theme'
 import type { GeneratedClass, NavigateDirection } from '../types'
 
@@ -54,6 +55,8 @@ export default function DevPanel() {
   const recentClasses = useDevPanelStore((s) => s.recentClasses)
   const recordRecent = useDevPanelStore((s) => s.recordRecent)
   const elementColors = useDevPanelStore((s) => s.elementColors)
+  const language = useDevPanelStore((s) => s.language)
+  const cycleLanguage = useDevPanelStore((s) => s.cycleLanguage)
 
   useEffect(() => {
     void loadTheme().then(setThemeState)
@@ -127,6 +130,14 @@ export default function DevPanel() {
           </button>
           <button
             type="button"
+            className="devwind-lang-btn"
+            onClick={cycleLanguage}
+            title="Langue des libellés de catégorie (clic pour changer)"
+          >
+            {LANGUAGE_LABEL[language]}
+          </button>
+          <button
+            type="button"
             className={`devwind-lock-btn${locked ? ' devwind-lock-btn--active' : ''}`}
             onClick={toggleLocked}
             title={locked ? 'Déverrouiller (reprendre la sélection au survol/clic)' : 'Verrouiller la sélection (interagir avec la page sans la perdre)'}
@@ -197,7 +208,7 @@ export default function DevPanel() {
                   key={item.className}
                   type="button"
                   className={`devwind-value${activeClasses.includes(searchActiveName(item.className)) ? ' devwind-value--active' : ''}${item.category === 'Couleurs' ? ' devwind-value--color' : ''}`}
-                  title={`${item.category} / ${item.subcategory ?? ''}`}
+                  title={`${translateCategory(item.category, language)} / ${item.subcategory ? translateSubcategory(item.subcategory, language) : ''}`}
                   onClick={() => applyItem(item)}
                 >
                   {item.category === 'Couleurs' && (

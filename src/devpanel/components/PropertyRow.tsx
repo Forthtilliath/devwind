@@ -3,6 +3,7 @@ import Popover from './Popover'
 import ValuePickerList from './ValuePickerList'
 import SideIcon, { hasSideIcon } from './SideIcon'
 import { formatSuffix } from '../format'
+import { translateSubcategory } from '../i18n'
 import { useDevPanelStore } from '../store/useDevPanelStore'
 import type { GeneratedClass, TaxonomyEntry } from '../../types'
 
@@ -31,11 +32,13 @@ export default function PropertyRow({ entry, classes, activeClasses, variants, o
   const prefixes = entry.prefixes
   const [activePrefix, setActivePrefix] = useState(prefixes[0])
   const elementColors = useDevPanelStore((s) => s.elementColors)
+  const language = useDevPanelStore((s) => s.language)
+  const label = entry.subcategory ? translateSubcategory(entry.subcategory, language) : entry.subcategory
 
   if (entry.type === 'static') {
     return (
       <div className="devwind-row">
-        <span className="devwind-row__label">{entry.subcategory}</span>
+        <span className="devwind-row__label">{label}</span>
         <div className="devwind-row__pills">
           {classes.map((item) => (
             <button
@@ -68,7 +71,7 @@ export default function PropertyRow({ entry, classes, activeClasses, variants, o
 
   return (
     <div className="devwind-row">
-      <span className="devwind-row__label">{entry.subcategory}</span>
+      <span className="devwind-row__label">{label}</span>
 
       {prefixes.length > 1 && (
         <div className="devwind-row__sides">

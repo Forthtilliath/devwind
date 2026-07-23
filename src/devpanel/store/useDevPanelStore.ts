@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
+import { loadLanguage, setLanguage as persistLanguage } from '../i18n'
+import type { Language } from '../i18n'
 import type { AncestorInfo, ChangeLogEntry, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel, ThemeVariable } from '../../types'
 
 function getTargetTabId(): number {
@@ -47,6 +49,9 @@ interface DevPanelState {
   /** Historique de TOUTES les modifications de la session (pas juste l'élément courant),
    * le plus ancien en premier — cf. content/sync.ts. */
   changeLog: ChangeLogEntry[]
+  /** Langue des libellés de catégorie/sous-catégorie (cf. devpanel/i18n.ts) — `taxonomy.ts`
+   * mélangeait français et anglais selon l'entrée, ce réglage uniformise l'affichage. */
+  language: Language
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -61,6 +66,7 @@ interface DevPanelState {
   toggleLocked: () => void
   recordRecent: (item: GeneratedClass) => void
   clearChangeLog: () => void
+  cycleLanguage: () => void
 }
 
 function send(message: SyncFromPanel) {
@@ -81,6 +87,7 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   recentClasses: [],
   elementColors: null,
   changeLog: [],
+  language: 'fr',
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -92,6 +99,8 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
       const recent = stored[RECENT_STORAGE_KEY]
       if (Array.isArray(recent)) set({ recentClasses: recent as GeneratedClass[] })
     })
+
+    void loadLanguage().then((language) => set({ language }))
 
     p.onMessage.addListener((message: SyncFromContent) => {
       switch (message.type) {
@@ -171,4 +180,9 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     void chrome.storage.local.set({ [RECENT_STORAGE_KEY]: next })
   },
   clearChangeLog: () => send({ type: 'CLEAR_CHANGE_LOG' }),
+  cycleLanguage: () => {
+    const next = get().language === 'fr' ? 'en' : 'fr'
+    set({ language: next })
+    void persistLanguage(next)
+  },
 }))

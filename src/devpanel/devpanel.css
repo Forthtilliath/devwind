@@ -133,6 +133,7 @@ body {
 }
 
 .devwind-theme-btn,
+.devwind-lang-btn,
 .devwind-lock-btn {
   background: var(--dw-bg-subtle);
   border: 1px solid var(--dw-border);
@@ -144,8 +145,16 @@ body {
 }
 
 .devwind-theme-btn:hover,
+.devwind-lang-btn:hover,
 .devwind-lock-btn:hover {
   border-color: var(--dw-accent);
+}
+
+.devwind-lang-btn {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--dw-text-strong);
 }
 
 .devwind-lock-btn--active {
