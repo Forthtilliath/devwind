@@ -50,6 +50,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
         out.push({
           className: className(prefix, value),
           taxonomyId: entry.id,
+          prefix,
           category: entry.category,
           subcategory: entry.subcategory,
           themeKey: null,
@@ -70,6 +71,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
       out.push({
         className: className(prefix, key),
         taxonomyId: entry.id,
+        prefix,
         category: entry.category,
         subcategory: entry.subcategory,
         themeKey: entry.themeKey,
@@ -80,6 +82,7 @@ function entriesForTaxonomy(entry: TaxonomyEntry): GeneratedClass[] {
         out.push({
           className: `-${className(prefix, key)}`,
           taxonomyId: entry.id,
+          prefix,
           category: entry.category,
           subcategory: entry.subcategory,
           themeKey: entry.themeKey,
