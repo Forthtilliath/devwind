@@ -1,5 +1,5 @@
 import { taxonomy } from '../data/taxonomy'
-import generatedClasses from '../data/generated/tailwind-v3-classes.json'
+import generatedClasses from '../data/generated/tailwind-classes.json'
 import { hasRuleForClass } from './css-scanner'
 import type { GeneratedClass } from '../types'
 

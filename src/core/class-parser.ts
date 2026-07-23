@@ -1,5 +1,5 @@
 import { taxonomy } from '../data/taxonomy'
-import generatedClasses from '../data/generated/tailwind-v3-classes.json'
+import generatedClasses from '../data/generated/tailwind-classes.json'
 import type { GeneratedClass, ParsedClass, TaxonomyEntry } from '../types'
 
 /**

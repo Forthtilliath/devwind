@@ -1,4 +1,4 @@
-import generatedClasses from '../data/generated/tailwind-v3-classes.json'
+import generatedClasses from '../data/generated/tailwind-classes.json'
 import type { GeneratedClass } from '../types'
 
 const classes = generatedClasses as GeneratedClass[]

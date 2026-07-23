@@ -1,17 +1,40 @@
-// Script de build : croise `resolveConfig` (thème par défaut Tailwind v3, API publique
-// et stable) avec la taxonomie hand-authored (src/data/taxonomy.ts) pour produire le
-// dataset des classes utilitaires, SANS jamais taper une classe à la main.
-// Sortie versionnée : src/data/generated/tailwind-v3-classes.json (bundlée par Vite, pas de fetch runtime).
+// Script de build : croise le thème par défaut Tailwind v4 (API publique et stable) avec la
+// taxonomie hand-authored (src/data/taxonomy.ts) pour produire le dataset des classes
+// utilitaires, SANS jamais taper une classe à la main.
+// Sortie versionnée : src/data/generated/tailwind-classes.json (bundlée par Vite, pas de
+// fetch runtime).
+//
+// Tailwind v4 a retiré `resolveConfig` (plus de config JS à résoudre, le moteur est natif/Rust
+// et piloté par CSS via `@theme`). `tailwindcss/defaultTheme` expose encore le thème par défaut
+// brut avec les mêmes clés qu'avant, mais certaines entrées restent des fonctions non résolues
+// (même mécanisme qu'avant `resolveConfig` en v3) — `themeFn` ci-dessous les résout récursivement,
+// vérifié à la main pour chaque clé utilisée par taxonomy.ts (aucune n'est restée fonction après
+// résolution). Différence notable : les couleurs par défaut sont maintenant en OKLCH plutôt qu'en
+// hex (ex. `oklch(63.7% 0.237 25.331)` au lieu de `#ef4444`) — géré nativement par `color-mix()`
+// et les swatches CSS, aucun changement de code nécessaire ailleurs pour ça.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import resolveConfig from 'tailwindcss/resolveConfig'
+// @ts-expect-error -- pas de champ "types" dans les exports de ce sous-chemin, mais les .d.ts
+// sont bien présents à côté du .mjs ; le typage manuel ci-dessous suffit de toute façon.
+import rawDefaultTheme from 'tailwindcss/defaultTheme'
 import { taxonomy } from '../src/data/taxonomy'
 import type { GeneratedClass, TaxonomyEntry } from '../src/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const { theme } = resolveConfig({ content: [] }) as { theme: Record<string, unknown> }
+type RawTheme = Record<string, unknown | ((ctx: { theme: (key: string) => unknown }) => unknown)>
+const rawTheme = rawDefaultTheme as RawTheme
+
+function themeFn(key: string): unknown {
+  const v = rawTheme[key]
+  return typeof v === 'function' ? v({ theme: themeFn }) : v
+}
+
+const theme: Record<string, unknown> = new Proxy(
+  {},
+  { get: (_t, key: string) => themeFn(key) },
+)
 
 function className(prefix: string, key: string): string {
   if (prefix === '') return key
@@ -42,14 +65,14 @@ function flattenThemeScale(scale: unknown, prefix = ''): FlatEntry[] {
   return out
 }
 
-/** Pour fontSize v3 : valeur = string, ou [taille, {lineHeight}] / [taille, lineHeight]. */
+/** Pour fontSize : valeur = string, ou [taille, {lineHeight}] / [taille, lineHeight]. */
 function stringifyThemeValue(value: unknown): string {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return String(value[0])
   return JSON.stringify(value)
 }
 
-/** Pour fontSize v3 uniquement : extrait le line-height apparié `[taille, {lineHeight}]`,
+/** Pour fontSize uniquement : extrait le line-height apparié `[taille, {lineHeight}]`,
  * sinon `null`. Générique (pas de branchement spécifique fontSize dans entriesForTaxonomy) :
  * ne renvoie une valeur que si la forme du thème s'y prête. */
 function stringifySecondaryValue(value: unknown): string | null {
@@ -133,7 +156,7 @@ const generated: GeneratedClass[] = taxonomy.flatMap(entriesForTaxonomy)
 
 const outDir = path.resolve(__dirname, '../src/data/generated')
 fs.mkdirSync(outDir, { recursive: true })
-const outFile = path.join(outDir, 'tailwind-v3-classes.json')
+const outFile = path.join(outDir, 'tailwind-classes.json')
 fs.writeFileSync(outFile, JSON.stringify(generated, null, 2))
 
 console.log(`[generate-tailwind-data] ${generated.length} classes générées -> ${path.relative(process.cwd(), outFile)}`)
