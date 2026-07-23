@@ -123,6 +123,12 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
         case 'CHANGE_LOG_UPDATED':
           set({ changeLog: message.entries })
           return
+        case 'LOCKED_CHANGED':
+          // Verrouillage déclenché depuis la page (Échap sur le picker), pas depuis le bouton
+          // du panneau : rien à renvoyer à la page (déjà fait côté content script), juste
+          // refléter l'état pour que l'icône 🔒/🔓 reste synchronisée.
+          set({ locked: message.locked })
+          return
       }
     })
 

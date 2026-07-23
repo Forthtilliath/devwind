@@ -150,6 +150,7 @@ export type SyncFromContent =
   | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[]; detectedPrefix: string | null }
   | { type: 'THEME_SCAN_RESULT'; variables: ThemeVariable[] }
   | { type: 'CHANGE_LOG_UPDATED'; entries: ChangeLogEntry[] }
+  | { type: 'LOCKED_CHANGED'; locked: boolean }
 
 /** Direction de navigation clavier, relative à l'élément sélectionné. */
 export type NavigateDirection = 'parent' | 'child' | 'prev' | 'next'

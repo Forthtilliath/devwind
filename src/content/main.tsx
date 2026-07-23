@@ -1,6 +1,6 @@
 import { mountShadowHost } from './shadow-mount'
 import { createElementPicker } from './picker/elementPicker'
-import { selectElement, setupSync } from './sync'
+import { notifyLockedFromPage, selectElement, setupSync } from './sync'
 import type { PickerMessage, PickerState } from '../types'
 
 const HOST_ID = 'devwind-root-host'
@@ -19,6 +19,15 @@ function mount() {
     shadowRoot,
     host,
     onSelect: (el) => selectElement(el),
+    // Échap pendant le picking : verrouille la sélection courante (au lieu de la perdre), pour
+    // pouvoir interagir normalement avec la page sans que le picker continue à réagir au
+    // survol/clic — même effet que le bouton 🔒 du panneau, déclenché depuis la page.
+    onEscape: () => {
+      if (!pickerActive || locked) return
+      locked = true
+      picker.stop()
+      notifyLockedFromPage(true)
+    },
   })
 
   setupSync({

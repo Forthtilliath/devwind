@@ -4,6 +4,9 @@ export interface ElementPickerOptions {
   shadowRoot: ShadowRoot
   host: Element
   onSelect: (el: Element) => void
+  /** Échap pendant le picking : laisse l'appelant décider de la réaction (verrouiller la
+   * sélection courante, cf. main.tsx) — le picker se contente de masquer son survol. */
+  onEscape?: () => void
 }
 
 export interface ElementPicker {
@@ -27,7 +30,7 @@ function describeElement(el: Element): string {
  * chaque clic sur la page sélectionne l'élément visé (au lieu de laisser passer le clic
  * normalement) et met à jour le panneau. Désactivé uniquement via le toggle du popup.
  */
-export function createElementPicker({ shadowRoot, host, onSelect }: ElementPickerOptions): ElementPicker {
+export function createElementPicker({ shadowRoot, host, onSelect, onEscape }: ElementPickerOptions): ElementPicker {
   const overlay = createOverlay(shadowRoot)
   let active = false
   let rafId: number | null = null
@@ -82,6 +85,7 @@ export function createElementPicker({ shadowRoot, host, onSelect }: ElementPicke
     if (e.key === 'Escape') {
       overlay.hide()
       lastHovered = null
+      onEscape?.()
     }
   }
 

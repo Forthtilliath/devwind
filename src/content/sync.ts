@@ -270,3 +270,10 @@ export function setupSync(opts: SetupSyncOptions) {
 export function selectElement(el: Element | null) {
   setSelection(el)
 }
+
+/** Appelé quand le verrouillage est déclenché depuis LA PAGE (Échap, cf. main.tsx) plutôt que
+ * depuis le bouton 🔒 du panneau : contrairement à `SET_LOCKED` (panneau → page), il n'y a rien
+ * à appliquer côté page ici (déjà fait par l'appelant), juste à synchroniser l'icône du panneau. */
+export function notifyLockedFromPage(locked: boolean) {
+  send({ type: 'LOCKED_CHANGED', locked })
+}
