@@ -6,14 +6,15 @@ Cible **Tailwind CSS v4** (thème par défaut en OKLCH, variables CSS `@theme`, 
 
 ## Fonctionnalités
 
-- **Picker visuel** : clic sur l'icône ou `Ctrl+Shift+K` pour activer le picker, clic sur un élément de la page pour sélectionner ce qu'on veut éditer. Fil d'ariane des ancêtres, navigation clavier (flèches), mode verrouillé pour interagir avec la page sans perdre la sélection.
-- **Panneau dans une fenêtre séparée**, déplaçable indépendamment (utile sur un second écran) : classes regroupées par catégorie (couleurs, spacing, typographie, bordures, effets, filtres, transitions, interactivité...), recherche transversale, valeurs récentes, export en texte brut ou JSX.
+- **Picker visuel** : clic sur l'icône ou `Ctrl+Shift+K` pour activer le picker, clic sur un élément de la page pour sélectionner ce qu'on veut éditer. Fil d'ariane des ancêtres, navigation clavier (flèches), mode verrouillé pour interagir avec la page sans perdre la sélection (bouton 🔒 ou `Échap` directement sur la page).
+- **Panneau dans une fenêtre séparée**, déplaçable indépendamment (utile sur un second écran) : classes regroupées par catégorie (couleurs, spacing, typographie, bordures, effets, filtres, transitions, interactivité...) dans un rail redimensionnable, recherche transversale, valeurs récentes, export en texte brut ou JSX.
+- **Historique de session** : chaque ajout/retrait de classe, sur n'importe quel élément de la page (pas juste la sélection courante), est loggué avec un diff `+classe`/`−classe` — pratique pour retrouver l'ensemble des modifications faites à différents endroits avant de finaliser. Copiable, vidable.
 - **Synthèse CSS live** : une classe choisie dans le panneau produit un effet visuel immédiat même si elle est absente du CSS déjà chargé sur la page (build de prod purgé) — variants `hover:`, `dark:`, breakpoints, `group-*`/`peer-*`, `aria-*`, `has-*`, `data-*`, opacité de couleur (`bg-red-500/80`), propriétés composites (transform/filter/backdrop-filter) synthétisées fidèlement au vrai moteur v4.
 - **Détection du thème réel du site** : les classes synthétisées référencent les vraies variables CSS `@theme` du site (avec repli sur notre thème par défaut), y compris si le site utilise un préfixe Tailwind custom (`tw:bg-red-500` → `--tw-color-red-500`).
 - **Navigateur de variables de thème** : liste les `--color-*`/`--radius-*`/`--spacing`/etc. réellement définis sur `:root` du site.
 - **Scan CSS** : détecte les classes custom (non-Tailwind) utilisées sur la page en parsant les feuilles de style chargées (avec repli `fetch()` pour le cross-origin autorisant CORS), re-scanne automatiquement si le site charge du CSS dynamiquement.
 - **Contrôle de contraste WCAG** : ratio texte/fond de l'élément sélectionné (AA/AAA), aperçu du contraste par couleur candidate avant de l'appliquer.
-- Thème clair/sombre du panneau, raccourcis clavier, indicateur de classe non synthétisable.
+- Thème clair/sombre du panneau, libellés de catégorie en français ou anglais (toggle FR/EN, pas de mélange), raccourcis clavier, indicateur de classe non synthétisable.
 
 Détail complet des fonctionnalités et idées futures : [UPGRADES.md](UPGRADES.md).
 
