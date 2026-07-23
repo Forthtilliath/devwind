@@ -50,4 +50,12 @@ test.describe('Parcours principal : sélection, édition, contraste, scan custom
     await devpanel.locator('.devwind-custom-section summary').first().click()
     await expect(devpanel.locator('.devwind-value-grid .devwind-value__label', { hasText: 'my-custom-btn' })).toBeVisible()
   })
+
+  test("`after:` (vrai variant Tailwind) n'est pas détecté à tort comme préfixe de site", async ({ openFixture }) => {
+    const { page, devpanel } = await openFixture('basic.html')
+    await page.click('#target-btn')
+
+    await devpanel.locator('.devwind-custom-section summary').first().click()
+    await expect(devpanel.locator('.devwind-badge', { hasText: 'préfixe détecté' })).toHaveCount(0)
+  })
 })

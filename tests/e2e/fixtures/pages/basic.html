@@ -21,5 +21,12 @@
   <body>
     <button id="target-btn" class="bg-red-500 text-white px-4 py-2 rounded my-custom-btn">Bouton de test</button>
     <p id="target-p" class="text-left">Paragraphe de test.</p>
+
+    <!-- `after:`/`before:` sont de VRAIS variants Tailwind (pseudo-éléments), pas un préfixe de
+         site : 3+ occurrences ne doivent PAS déclencher la détection heuristique de préfixe
+         (detectSitePrefix dans css-scanner.ts) — régression couverte par un test dédié. -->
+    <div id="after-a" class="after:absolute">après A</div>
+    <div id="after-b" class="after:absolute">après B</div>
+    <div id="after-c" class="after:absolute">après C</div>
   </body>
 </html>
