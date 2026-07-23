@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: mode === 'test' ? 'dist-test' : 'dist', // garder en phase avec vite.config.ts
     emptyOutDir: false, // ne pas effacer la sortie du build principal (vite.config.ts), lancé avant
+    // Le code-splitting est impossible ici (pas juste indésirable) : `inlineDynamicImports`
+    // ci-dessous exige explicitement un seul fichier, imposé par `executeScript({ files })` qui
+    // injecte un script classique unique. On relève juste le seuil d'avertissement.
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: { content: 'src/content/main.tsx' },
       output: {
