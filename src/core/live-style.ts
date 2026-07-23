@@ -67,10 +67,29 @@ const THEME_VAR_PREFIX: Partial<Record<string, string>> = {
   animation: '--animate-',
 }
 
+// Préfixe de site détecté (option `prefix` de Tailwind v4, cf. `detectSitePrefix` dans
+// css-scanner.ts), poussé depuis content/sync.ts après chaque scan. Vérifié en compilant avec
+// `@tailwindcss/cli --prefix tw` : le préfixe s'insère juste après `--` dans TOUTES les
+// variables de thème (`--color-red-500` -> `--tw-color-red-500`, `--spacing` -> `--tw-spacing`),
+// mais PAS dans les variables internes `--tw-*` que Tailwind utilise pour composer
+// transform/filter (celles-ci ne viennent pas de `@theme`, leur nom `tw` est un hasard de
+// nommage interne à Tailwind, indépendant du préfixe configuré par le site).
+let sitePrefix: string | null = null
+
+export function setSitePrefix(prefix: string | null): void {
+  sitePrefix = prefix
+}
+
+function prefixedVarNamespace(namespace: string): string {
+  // `namespace` est du type '--color-' : insère le préfixe de site juste après les deux tirets.
+  return sitePrefix ? `--${sitePrefix}-${namespace.slice(2)}` : namespace
+}
+
 function themeVarValue(taxonomyId: string, suffix: string, fallback: string): string {
-  const prefix = THEME_VAR_PREFIX[taxonomyId]
-  if (!prefix) return fallback
-  const varName = suffix ? `${prefix}${suffix}` : prefix.slice(0, -1) // forme nue (DEFAULT) : pas de tiret final
+  const rawPrefix = THEME_VAR_PREFIX[taxonomyId]
+  if (!rawPrefix) return fallback
+  const namespace = prefixedVarNamespace(rawPrefix)
+  const varName = suffix ? `${namespace}${suffix}` : namespace.slice(0, -1) // forme nue (DEFAULT) : pas de tiret final
   return `var(${varName}, ${fallback})`
 }
 
@@ -84,7 +103,8 @@ const DEFAULT_SPACING = '0.25rem'
 
 function spacingCalc(suffix: string, negative: boolean): string | null {
   if (!/^\d+(\.\d+)?$/.test(suffix)) return null
-  return `calc(var(--spacing, ${DEFAULT_SPACING}) * ${negative ? '-' : ''}${suffix})`
+  const varName = sitePrefix ? `--${sitePrefix}-spacing` : '--spacing'
+  return `calc(var(${varName}, ${DEFAULT_SPACING}) * ${negative ? '-' : ''}${suffix})`
 }
 
 function extractSuffix(classNameWithSign: string, prefix: string, negative: boolean): string {
@@ -339,6 +359,16 @@ function wrapMedia(rule: string, queries: string[]): string {
   return queries.reduce((r, mq) => `@media ${mq} { ${r} }`, rule)
 }
 
+/** Les deux règles `dark:` synthétisées ont les mêmes déclarations et la même spécificité
+ * (`:where()` en a zéro) : à égalité, seul l'ordre d'apparition dans la feuille tranche.
+ * On émet en dernier la stratégie que le site utilise réellement en ce moment (`.dark` présent
+ * sur `<html>`/`<body>` = stratégie classe ; sinon media query), pour que notre règle gagne
+ * face à du vrai CSS du site qui ciblerait la même propriété avec une spécificité égale. */
+function detectDarkStrategy(): 'class' | 'media' {
+  const hasDarkClass = document.documentElement.classList.contains('dark') || document.body?.classList.contains('dark')
+  return hasDarkClass ? 'class' : 'media'
+}
+
 /**
  * Garantit qu'une classe Tailwind (avec variants éventuels) a un effet visuel même si le CSS
  * de la page ne la définit pas (build de production purgé qui n'a jamais utilisé cette
@@ -371,8 +401,10 @@ export function ensureLiveRule(fullClassName: string): LiveRuleStatus {
 
   let output = ''
   if (plan.hasDark) {
-    output += `${wrapMedia(`${selector} { ${importantDecls}; }`, ['(prefers-color-scheme: dark)', ...plan.mediaQueries])}\n`
-    output += `${wrapMedia(`${selector}:where(.dark, .dark *) { ${importantDecls}; }`, plan.mediaQueries)}\n`
+    const mediaRule = wrapMedia(`${selector} { ${importantDecls}; }`, ['(prefers-color-scheme: dark)', ...plan.mediaQueries])
+    const classRule = wrapMedia(`${selector}:where(.dark, .dark *) { ${importantDecls}; }`, plan.mediaQueries)
+    const rules = detectDarkStrategy() === 'class' ? [mediaRule, classRule] : [classRule, mediaRule]
+    output += `${rules.join('\n')}\n`
   } else {
     output += `${wrapMedia(`${selector} { ${importantDecls}; }`, plan.mediaQueries)}\n`
   }
