@@ -3,7 +3,7 @@ import { detectSitePrefix, scanCustomClasses, watchForStylesheetChanges } from '
 import { ensureLiveRule, setSitePrefix } from '../core/live-style'
 import { scanThemeVariables } from '../core/theme-scanner'
 import { DEVWIND_SYNC_PORT } from '../types'
-import type { AncestorInfo, ElementColors, SyncFromContent, SyncFromPanel } from '../types'
+import type { AncestorInfo, ChangeLogEntry, ClassChangeResult, ElementColors, SyncFromContent, SyncFromPanel } from '../types'
 
 // Élément actuellement sélectionné + chaîne de ses ancêtres (fil d'ariane), gardés hors de
 // tout state React/store (c'est le content script qui a l'accès DOM réel ; la fenêtre devpanel
@@ -15,12 +15,47 @@ let stopWatchingStylesheets: (() => void) | null = null
 
 const MAX_ANCESTORS = 8
 
+// Historique des modifications de TOUTE la page pendant la session (pas juste l'élément
+// sélectionné) : permet de retrouver l'ensemble des changements faits à différents endroits
+// sans avoir à s'en souvenir soi-même. Vidé au rechargement de la page (le content script est
+// ré-injecté à zéro), plafonné pour éviter une croissance illimitée sur une session très longue.
+const MAX_LOG_ENTRIES = 300
+let changeLog: ChangeLogEntry[] = []
+let changeLogIdCounter = 0
+
 function readClasses(el: Element): string[] {
   return el.className.toString().split(/\s+/).filter(Boolean)
 }
 
 function describeAncestor(el: Element): AncestorInfo {
   return { tagName: el.tagName.toLowerCase(), id: el.id || null, classes: readClasses(el) }
+}
+
+/** Description légère mais STABLE d'un élément (jamais basée sur ses classes, puisque ce sont
+ * justement elles qui changent) : id si présent, sinon position parmi ses frères de même tag —
+ * pas un sélecteur garanti unique, juste de quoi se repérer visuellement dans l'historique. */
+function describeElement(el: Element): string {
+  const tag = el.tagName.toLowerCase()
+  if (el.id) return `${tag}#${el.id}`
+  const parent = el.parentElement
+  if (!parent) return tag
+  const siblingsOfSameTag = Array.from(parent.children).filter((c) => c.tagName === el.tagName)
+  if (siblingsOfSameTag.length <= 1) return tag
+  return `${tag}:nth-of-type(${siblingsOfSameTag.indexOf(el) + 1})`
+}
+
+/** Diffe un `ClassChangeResult` et l'ajoute à l'historique de session (silencieux si la
+ * modification n'a en fait rien changé, ex. reposer la même valeur déjà active). */
+function logChange(el: Element, result: ClassChangeResult) {
+  const before = result.before.split(/\s+/).filter(Boolean)
+  const after = result.after.split(/\s+/).filter(Boolean)
+  const added = after.filter((c) => !before.includes(c))
+  const removed = before.filter((c) => !after.includes(c))
+  if (added.length === 0 && removed.length === 0) return
+
+  changeLog.push({ id: ++changeLogIdCounter, timestamp: Date.now(), elementLabel: describeElement(el), added, removed })
+  if (changeLog.length > MAX_LOG_ENTRIES) changeLog = changeLog.slice(changeLog.length - MAX_LOG_ENTRIES)
+  send({ type: 'CHANGE_LOG_UPDATED', entries: changeLog })
 }
 
 /** Du parent direct jusqu'à `<body>` inclus, plafonné pour éviter un fil d'ariane interminable
@@ -146,21 +181,21 @@ function handlePanelMessage(message: SyncFromPanel) {
         const fullClassName = [...message.request.variants, message.request.newBase].join(':')
         if (ensureLiveRule(fullClassName) === 'unsupported') unsupportedClass = fullClassName
       }
-      applyClassChange(selectedEl, message.request)
+      logChange(selectedEl, applyClassChange(selectedEl, message.request))
       sendClassesUpdated(selectedEl, unsupportedClass)
       return
     }
     case 'REMOVE_CLASS': {
       if (!selectedEl) return
-      removeRawClass(selectedEl, message.rawClass)
+      logChange(selectedEl, removeRawClass(selectedEl, message.rawClass))
       sendClassesUpdated(selectedEl)
       return
     }
     case 'TOGGLE_CLASS': {
       if (!selectedEl) return
       const current = readClasses(selectedEl)
-      if (current.includes(message.rawClass)) removeRawClass(selectedEl, message.rawClass)
-      else addRawClass(selectedEl, message.rawClass)
+      const result = current.includes(message.rawClass) ? removeRawClass(selectedEl, message.rawClass) : addRawClass(selectedEl, message.rawClass)
+      logChange(selectedEl, result)
       sendClassesUpdated(selectedEl)
       return
     }
@@ -185,6 +220,11 @@ function handlePanelMessage(message: SyncFromPanel) {
       options?.onSetLocked(message.locked)
       return
     }
+    case 'CLEAR_CHANGE_LOG': {
+      changeLog = []
+      send({ type: 'CHANGE_LOG_UPDATED', entries: changeLog })
+      return
+    }
   }
 }
 
@@ -204,6 +244,11 @@ export function setupSync(opts: SetupSyncOptions) {
         colors: computeEffectiveColors(selectedEl),
       })
     }
+
+    // Toujours renvoyé, même vide : une fenêtre devpanel réouverte doit refléter l'historique
+    // déjà accumulé cette session (le content script, lui, n'est pas ré-injecté à chaque
+    // ouverture du panneau).
+    send({ type: 'CHANGE_LOG_UPDATED', entries: changeLog })
 
     // Re-scanne automatiquement (debounced) si le site charge une feuille de style après coup
     // (route SPA, composant lazy-loadé...), pour ne pas laisser la liste "Custom" périmée tant

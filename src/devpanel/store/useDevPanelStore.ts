@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
-import type { AncestorInfo, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel, ThemeVariable } from '../../types'
+import type { AncestorInfo, ChangeLogEntry, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel, ThemeVariable } from '../../types'
 
 function getTargetTabId(): number {
   const raw = new URLSearchParams(window.location.search).get('tabId')
@@ -44,6 +44,9 @@ interface DevPanelState {
   /** Couleurs effectives (texte/fond réels, `getComputedStyle`) de l'élément sélectionné —
    * sert au contrôle de contraste WCAG (cf. core/contrast.ts). */
   elementColors: ElementColors | null
+  /** Historique de TOUTES les modifications de la session (pas juste l'élément courant),
+   * le plus ancien en premier — cf. content/sync.ts. */
+  changeLog: ChangeLogEntry[]
 
   connect: () => void
   applyChange: (request: ClassChangeRequest) => void
@@ -57,6 +60,7 @@ interface DevPanelState {
   navigate: (direction: NavigateDirection) => void
   toggleLocked: () => void
   recordRecent: (item: GeneratedClass) => void
+  clearChangeLog: () => void
 }
 
 function send(message: SyncFromPanel) {
@@ -76,6 +80,7 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   unsupportedClasses: [],
   recentClasses: [],
   elementColors: null,
+  changeLog: [],
 
   connect: () => {
     if (port) return // déjà connecté (StrictMode peut monter deux fois en dev)
@@ -114,6 +119,9 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
           return
         case 'THEME_SCAN_RESULT':
           set({ themeVariables: message.variables })
+          return
+        case 'CHANGE_LOG_UPDATED':
+          set({ changeLog: message.entries })
           return
       }
     })
@@ -156,4 +164,5 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
     set({ recentClasses: next })
     void chrome.storage.local.set({ [RECENT_STORAGE_KEY]: next })
   },
+  clearChangeLog: () => send({ type: 'CLEAR_CHANGE_LOG' }),
 }))

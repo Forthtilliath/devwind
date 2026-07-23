@@ -101,6 +101,18 @@ export interface ThemeVariable {
   value: string
 }
 
+// --- Historique des modifications de la session (toute la page, pas juste l'élément courant) ---
+
+export interface ChangeLogEntry {
+  id: number
+  timestamp: number
+  /** Description légère de l'élément touché (ex. `button#target-btn`, `li:nth-of-type(2)`) —
+   * pas un sélecteur garanti unique, juste assez pour se repérer visuellement. */
+  elementLabel: string
+  added: string[]
+  removed: string[]
+}
+
 // --- Synchronisation content script <-> fenêtre devpanel (via chrome.runtime.Port) ---
 
 export const DEVWIND_SYNC_PORT = 'devwind-sync'
@@ -137,6 +149,7 @@ export type SyncFromContent =
   | { type: 'CLASSES_UPDATED'; classes: string[]; unsupportedClass?: string | null; colors: ElementColors }
   | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[]; detectedPrefix: string | null }
   | { type: 'THEME_SCAN_RESULT'; variables: ThemeVariable[] }
+  | { type: 'CHANGE_LOG_UPDATED'; entries: ChangeLogEntry[] }
 
 /** Direction de navigation clavier, relative à l'élément sélectionné. */
 export type NavigateDirection = 'parent' | 'child' | 'prev' | 'next'
@@ -151,3 +164,4 @@ export type SyncFromPanel =
   | { type: 'SELECT_ANCESTOR'; index: number }
   | { type: 'NAVIGATE'; direction: NavigateDirection }
   | { type: 'SET_LOCKED'; locked: boolean }
+  | { type: 'CLEAR_CHANGE_LOG' }

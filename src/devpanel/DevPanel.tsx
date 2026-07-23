@@ -10,6 +10,7 @@ import Breadcrumb from './components/Breadcrumb'
 import RecentClasses from './components/RecentClasses'
 import Popover from './components/Popover'
 import ContrastBadge from './components/ContrastBadge'
+import ChangeLogPanel from './components/ChangeLogPanel'
 import { searchClasses } from './data'
 import { loadTheme, setTheme, NEXT_THEME, THEME_ICON } from './theme'
 import type { ThemePreference } from './theme'
@@ -132,6 +133,7 @@ export default function DevPanel() {
           >
             {locked ? '🔒' : '🔓'}
           </button>
+          <ChangeLogPanel />
           {tagName && (
             <>
               <span className="devwind-panel__count">
