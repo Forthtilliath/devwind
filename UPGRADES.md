@@ -28,7 +28,8 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 
 ## Édition / historique
 
-- Pas d'undo/redo. Le mécanisme de `ClassChangeResult { before, after }` existe déjà côté `class-diff.ts` mais n'est pas exploité pour empiler un historique.
+- ~~Pas de vue d'ensemble des modifications de la page~~ — historique de session accessible depuis l'en-tête (icône 🕘 + compteur) : chaque ajout/retrait de classe, sur N'IMPORTE QUEL élément de la page (pas juste la sélection courante), est loggué avec un descriptif léger de l'élément touché (`tag#id` ou `tag:nth-of-type(n)`, jamais basé sur ses classes puisque ce sont justement elles qui changent) et un diff `+classe`/`−classe`. Copiable en texte brut, vidable, plafonné à 300 entrées. Exploite le `ClassChangeResult { before, after }` qui existait déjà côté `class-diff.ts` sans être utilisé.
+- **Pas fait** : undo/redo à proprement parler (annuler une entrée précise de l'historique) — la liste ci-dessus est en lecture seule, un clic ne réapplique/n'annule rien pour l'instant.
 - Pas de multi-sélection (éditer plusieurs éléments similaires en même temps, ex. tous les `<li>` d'une liste).
 - Pas de réordonnancement/tri manuel des chips de classes actives (ordre = ordre d'apparition dans `className`).
 - Édition de classes custom limitée à toggle on/off (pas de rename, pas d'édition de la valeur CSS associée).
@@ -40,7 +41,7 @@ Liste brute d'idées, en tout genre, pas encore priorisées. À trier/discuter a
 - ~~Pas de "classes récemment utilisées"~~ — dernières valeurs choisies via un picker (pas les valeurs arbitraires), persistées dans `chrome.storage.local`, réappliquables en un clic dans le contexte de variant courant.
 - ~~Sélecteur de côté en texte brut~~ — icônes SVG 14×14 (carré plein/côté/coin en surbrillance) pour tous les préfixes multiples (padding/margin/gap/border/rounded/scale/translate/skew), texte en secours pour un préfixe non cartographié.
 - ~~Pas d'indicateur de classe non synthétisée~~ — badge ⚠ sur le chip concerné (avec tooltip explicatif) quand `live-style` ne peut pas synthétiser d'effet visuel (variant non géré) ; se nettoie automatiquement si la classe est retirée/remplacée.
-- ~~Export limité à "copier les classes"~~ — menu Copier avec un second format JSX (`className="…"`). **Pas fait** : diff avant/après et liste des changements de la session, qui nécessitent un vrai mécanisme d'historique (dépend du point "Pas d'undo/redo" ci-dessus, non traité cette session).
+- ~~Export limité à "copier les classes"~~ — menu Copier avec un second format JSX (`className="…"`).
 
 ## Picker / sélection d'élément — ✅ fait
 
