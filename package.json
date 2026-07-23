@@ -1,5 +1,5 @@
 {
-  "name": "ext-devwind",
+  "name": "devwind",
   "private": true,
   "version": "0.1.2",
   "description": "Extension Chrome pour éditer visuellement les classes Tailwind CSS v4 en direct sur n'importe quel site.",
@@ -8,11 +8,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Forthtilliath/ext-devwind.git"
+    "url": "git+https://github.com/Forthtilliath/devwind.git"
   },
-  "homepage": "https://github.com/Forthtilliath/ext-devwind#readme",
+  "homepage": "https://github.com/Forthtilliath/devwind#readme",
   "bugs": {
-    "url": "https://github.com/Forthtilliath/ext-devwind/issues"
+    "url": "https://github.com/Forthtilliath/devwind/issues"
   },
   "scripts": {
     "generate:tw-data": "tsx scripts/generate-tailwind-data.ts",
