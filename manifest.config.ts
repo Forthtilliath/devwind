@@ -7,7 +7,9 @@ export default defineManifest({
   version: pkg.version,
   description: 'Éditeur visuel de classes Tailwind CSS, en direct dans le navigateur.',
   action: {
-    default_popup: 'src/popup/popup.html',
+    // Pas de default_popup : le clic sur l'icône ouvre/ferme directement la fenêtre devpanel
+    // (voir src/background/service-worker.ts), un mini-popup intermédiaire n'a plus lieu
+    // d'être maintenant que le panneau est une vraie fenêtre de navigateur séparée.
   },
   background: {
     service_worker: 'src/background/service-worker.ts',
@@ -21,17 +23,7 @@ export default defineManifest({
   },
   permissions: ['activeTab', 'scripting', 'storage'],
   // Pas de content_scripts statique ni de host_permissions au repos : le content script
-  // (dist/content/main.js, cf. vite.config.ts) est injecté à la demande via
-  // chrome.scripting.executeScript depuis le popup (voir src/popup/Popup.tsx), déclenché
-  // par le geste utilisateur sur l'icône (active `activeTab`). executeScript lui-même est un
-  // appel privilégié, pas une requête depuis la page. En revanche panel.css est chargé via
-  // fetch(chrome.runtime.getURL(...)) DEPUIS le content script une fois injecté (voir
-  // src/content/shadow-mount.ts) : ce fetch est traité comme une requête "page" par Chrome
-  // et nécessite donc d'être listé ici, même si techniquement émis par notre propre code.
-  web_accessible_resources: [
-    {
-      resources: ['panel.css'],
-      matches: ['<all_urls>'],
-    },
-  ],
+  // (dist/content/main.js, cf. vite.content.config.ts) est injecté à la demande via
+  // chrome.scripting.executeScript (voir src/core/activation.ts), déclenché par le geste
+  // utilisateur sur l'icône ou le raccourci clavier (active `activeTab`).
 })

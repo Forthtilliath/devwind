@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useEditorStore } from '../store/useEditorStore'
+import { useDevPanelStore } from '../store/useDevPanelStore'
 
 interface CustomClassesSectionProps {
   activeClasses: string[]
@@ -7,9 +7,9 @@ interface CustomClassesSectionProps {
 
 /** Classes non reconnues comme Tailwind, trouvées en scannant le CSS chargé par la page. */
 export default function CustomClassesSection({ activeClasses }: CustomClassesSectionProps) {
-  const customScan = useEditorStore((s) => s.customScan)
-  const runCssScan = useEditorStore((s) => s.runCssScan)
-  const toggleClass = useEditorStore((s) => s.toggleClass)
+  const customScan = useDevPanelStore((s) => s.customScan)
+  const runCssScan = useDevPanelStore((s) => s.runCssScan)
+  const toggleClass = useDevPanelStore((s) => s.toggleClass)
 
   useEffect(() => {
     runCssScan()

@@ -1,18 +1,7 @@
 import { matchTaxonomy, splitVariants } from './class-parser'
+import type { ClassChangeRequest, ClassChangeResult } from '../types'
 
-export interface ClassChangeRequest {
-  /** id de l'entrée taxonomy.ts concernée (ex. 'backgroundColor') */
-  taxonomyId: string
-  /** contexte de variant courant (ex. ['md','hover']), [] pour la classe de base */
-  variants: string[]
-  /** nouvelle classe de base à appliquer (ex. 'bg-red-500'), ou null pour retirer le slot */
-  newBase: string | null
-}
-
-export interface ClassChangeResult {
-  before: string
-  after: string
-}
+export type { ClassChangeRequest, ClassChangeResult }
 
 function sameVariantSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false
@@ -34,7 +23,8 @@ export function applyClassChange(el: Element, request: ClassChangeRequest): Clas
     const { variants, base } = splitVariants(raw)
     if (!sameVariantSet(variants, request.variants)) return true
     const match = matchTaxonomy(base)
-    return match?.entry.id !== request.taxonomyId
+    if (!match || match.entry.id !== request.taxonomyId) return true
+    return match.prefix !== request.prefix
   })
 
   const next = request.newBase

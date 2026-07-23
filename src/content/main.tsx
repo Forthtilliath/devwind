@@ -1,34 +1,40 @@
-import { createRoot } from 'react-dom/client'
 import { mountShadowHost } from './shadow-mount'
 import { createElementPicker } from './picker/elementPicker'
-import Panel from '../panel/Panel'
-import { useEditorStore } from '../panel/store/useEditorStore'
+import { selectElement, setupSync } from './sync'
 import type { PickerMessage, PickerState } from '../types'
 
 const HOST_ID = 'devwind-root-host'
 
-async function mount() {
+function mount() {
   // Idempotent : si le popup ré-exécute le content script sur un onglet déjà monté
   // (double clic rapide, etc.), on ne remonte pas un second Shadow DOM.
   if (document.getElementById(HOST_ID)) return
 
-  const { host, shadowRoot } = await mountShadowHost(HOST_ID)
+  const { host, shadowRoot } = mountShadowHost(HOST_ID)
 
-  const appRoot = document.createElement('div')
-  appRoot.id = 'app-root'
-  shadowRoot.appendChild(appRoot)
-  createRoot(appRoot).render(<Panel />)
+  let pickerActive = false
 
   const picker = createElementPicker({
     shadowRoot,
     host,
-    onSelect: (el) => {
-      useEditorStore.getState().selectElement(el)
+    onSelect: (el) => selectElement(el),
+  })
+
+  setupSync({
+    onPortConnected: () => {
+      // La fenêtre devpanel vient de se connecter : rien à faire de spécial ici, le picker
+      // est démarré/arrêté via DEVWIND_SET_ACTIVE (déclenché par core/activation.ts au moment
+      // de l'ouverture de la fenêtre), pas par la connexion du port elle-même.
+    },
+    onPortDisconnected: () => {
+      // Fenêtre devpanel fermée : plus personne pour éditer, on arrête le picker.
+      pickerActive = false
+      picker.stop()
     },
   })
 
   chrome.runtime.onMessage.addListener((message: PickerMessage, _sender, sendResponse) => {
-    const state = (): PickerState => ({ active: useEditorStore.getState().pickerActive })
+    const state = (): PickerState => ({ active: pickerActive })
 
     switch (message.type) {
       case 'DEVWIND_PING':
@@ -36,8 +42,8 @@ async function mount() {
         sendResponse(state())
         return true
       case 'DEVWIND_SET_ACTIVE': {
-        useEditorStore.getState().setPickerActive(message.active)
-        if (message.active) picker.start()
+        pickerActive = message.active
+        if (pickerActive) picker.start()
         else picker.stop()
         sendResponse(state())
         return true
@@ -48,4 +54,4 @@ async function mount() {
   })
 }
 
-void mount()
+mount()
