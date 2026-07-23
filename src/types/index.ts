@@ -94,6 +94,13 @@ export interface CssScanResult {
   detectedPrefix: string | null
 }
 
+// --- Variables de thème v4 (--color-*, --radius-*...) détectées sur le site ---
+
+export interface ThemeVariable {
+  name: string
+  value: string
+}
+
 // --- Synchronisation content script <-> fenêtre devpanel (via chrome.runtime.Port) ---
 
 export const DEVWIND_SYNC_PORT = 'devwind-sync'
@@ -129,6 +136,7 @@ export type SyncFromContent =
   | { type: 'ELEMENT_CLEARED' }
   | { type: 'CLASSES_UPDATED'; classes: string[]; unsupportedClass?: string | null; colors: ElementColors }
   | { type: 'CUSTOM_SCAN_RESULT'; found: [string, string[]][]; unscannable: string[]; detectedPrefix: string | null }
+  | { type: 'THEME_SCAN_RESULT'; variables: ThemeVariable[] }
 
 /** Direction de navigation clavier, relative à l'élément sélectionné. */
 export type NavigateDirection = 'parent' | 'child' | 'prev' | 'next'
@@ -139,6 +147,7 @@ export type SyncFromPanel =
   | { type: 'REMOVE_CLASS'; rawClass: string }
   | { type: 'TOGGLE_CLASS'; rawClass: string }
   | { type: 'RUN_CSS_SCAN' }
+  | { type: 'RUN_THEME_SCAN' }
   | { type: 'SELECT_ANCESTOR'; index: number }
   | { type: 'NAVIGATE'; direction: NavigateDirection }
   | { type: 'SET_LOCKED'; locked: boolean }

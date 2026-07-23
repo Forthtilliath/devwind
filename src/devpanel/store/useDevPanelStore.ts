@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { DEVWIND_SYNC_PORT } from '../../types'
-import type { AncestorInfo, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel } from '../../types'
+import type { AncestorInfo, ClassChangeRequest, CssScanResult, ElementColors, GeneratedClass, NavigateDirection, SyncFromContent, SyncFromPanel, ThemeVariable } from '../../types'
 
 function getTargetTabId(): number {
   const raw = new URLSearchParams(window.location.search).get('tabId')
@@ -25,6 +25,9 @@ interface DevPanelState {
   /** Du parent direct jusqu'à `<body>` : fil d'ariane pour remonter sans re-cliquer sur la page. */
   ancestors: AncestorInfo[]
   customScan: CssScanResult | null
+  /** Variables de thème v4 (`--color-*`, `--radius-*`...) réellement définies sur `:root` du
+   * site — indépendant de l'édition de classes, juste un outil d'inspection du thème réel. */
+  themeVariables: ThemeVariable[] | null
   search: string
   /** Contexte de variant courant (ex. ['md','hover']) : appliqué à toute nouvelle édition. */
   activeVariants: string[]
@@ -47,6 +50,7 @@ interface DevPanelState {
   removeClass: (rawClass: string) => void
   toggleClass: (rawClass: string) => void
   runCssScan: () => void
+  runThemeScan: () => void
   setSearch: (query: string) => void
   toggleVariant: (variant: string) => void
   selectAncestor: (index: number) => void
@@ -65,6 +69,7 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   activeClasses: [],
   ancestors: [],
   customScan: null,
+  themeVariables: null,
   search: '',
   activeVariants: [],
   locked: false,
@@ -107,6 +112,9 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
         case 'CUSTOM_SCAN_RESULT':
           set({ customScan: { found: new Map(message.found), unscannable: message.unscannable, detectedPrefix: message.detectedPrefix } })
           return
+        case 'THEME_SCAN_RESULT':
+          set({ themeVariables: message.variables })
+          return
       }
     })
 
@@ -122,6 +130,10 @@ export const useDevPanelStore = create<DevPanelState>((set, get) => ({
   runCssScan: () => {
     if (get().customScan) return
     send({ type: 'RUN_CSS_SCAN' })
+  },
+  runThemeScan: () => {
+    if (get().themeVariables) return
+    send({ type: 'RUN_THEME_SCAN' })
   },
   setSearch: (query) => set({ search: query }),
   toggleVariant: (variant) =>

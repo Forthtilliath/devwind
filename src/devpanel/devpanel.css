@@ -723,6 +723,61 @@ body {
   font-size: 9px;
 }
 
+/* --- Variables de thème détectées sur le site --- */
+
+.devwind-theme-vars__filter {
+  width: 100%;
+  margin: 6px 0;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--dw-border);
+  background: var(--dw-bg-subtle);
+  color: var(--dw-text);
+  font-size: 11px;
+}
+
+.devwind-theme-vars__filter:focus {
+  outline: 1px solid var(--dw-accent);
+}
+
+.devwind-theme-vars__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.devwind-theme-vars__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-size: 11px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--dw-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.devwind-theme-vars__row:hover {
+  background: var(--dw-bg-subtle);
+}
+
+.devwind-theme-vars__name {
+  color: var(--dw-text-strong);
+  flex-shrink: 0;
+}
+
+.devwind-theme-vars__value {
+  color: var(--dw-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
 /* --- Export (menu Copier, dans un Popover) --- */
 
 .devwind-export__menu {
