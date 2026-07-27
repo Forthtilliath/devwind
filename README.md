@@ -1,5 +1,7 @@
 # DevWind
 
+![License](https://img.shields.io/github/license/forthtilliath/devwind?style=for-the-badge) [![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/-TypeScript-blue?logo=typescript&logoColor=white&style=for-the-badge) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white) [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+
 Extension Chrome pour éditer visuellement les classes Tailwind CSS de n'importe quel site, en direct dans le navigateur — dans l'esprit de l'ancienne extension Gimli (discontinuée), avec une meilleure organisation des classes et la prise en charge des classes custom du site.
 
 Cible **Tailwind CSS v4** (thème par défaut en OKLCH, variables CSS `@theme`, syntaxe de préfixe `tw:`...).
