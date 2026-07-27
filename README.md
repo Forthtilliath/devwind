@@ -6,6 +6,12 @@ Extension Chrome pour éditer visuellement les classes Tailwind CSS de n'importe
 
 Cible **Tailwind CSS v4** (thème par défaut en OKLCH, variables CSS `@theme`, syntaxe de préfixe `tw:`...).
 
+![Page éditée avec le mode verrouillé actif](docs/page-picker.webp)
+
+|                                     Panneau des classes                                     |                                    Panneau des couleurs                                    |
+| :-------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------: |
+| ![Panneau DevWind affichant les classes de l'élément sélectionné](docs/devpanel-classes.webp) | ![Panneau DevWind affichant la catégorie Couleurs](docs/devpanel-colors.webp) |
+
 ## Fonctionnalités
 
 - **Picker visuel** : clic sur l'icône ou `Ctrl+Shift+K` pour activer le picker, clic sur un élément de la page pour sélectionner ce qu'on veut éditer. Fil d'ariane des ancêtres, navigation clavier (flèches), mode verrouillé pour interagir avec la page sans perdre la sélection (bouton 🔒 ou `Échap` directement sur la page).
