@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useDevPanelStore } from '../store/useDevPanelStore'
-
-let copyTimer: ReturnType<typeof setTimeout> | null = null
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
+import { useT } from '../i18n/useT'
 
 /** Variables de thème Tailwind v4 (`--color-*`, `--radius-*`...) réellement définies sur
  * `:root` du site — indépendant de l'élément sélectionné, sert juste à inspecter le vrai
  * thème du site (utile pour comprendre pourquoi une classe rendue diffère de notre aperçu par
  * défaut, cf. `live-style.ts` qui référence ces mêmes variables avec fallback). */
 export default function ThemeVariablesSection() {
+  const t = useT()
   const themeVariables = useDevPanelStore((s) => s.themeVariables)
   const runThemeScan = useDevPanelStore((s) => s.runThemeScan)
   const [filter, setFilter] = useState('')
-  const [copiedName, setCopiedName] = useState<string | null>(null)
+  const { copied: copiedName, copy } = useCopyToClipboard()
 
   useEffect(() => {
     runThemeScan()
@@ -22,21 +23,15 @@ export default function ThemeVariablesSection() {
   const query = filter.trim().toLowerCase()
   const visible = query ? themeVariables.filter((v) => v.name.toLowerCase().includes(query)) : themeVariables
 
-  async function copyVar(name: string) {
-    await navigator.clipboard.writeText(`var(${name})`)
-    setCopiedName(name)
-    if (copyTimer) clearTimeout(copyTimer)
-    copyTimer = setTimeout(() => setCopiedName(null), 1200)
-  }
-
   return (
     <details className="devwind-custom-section">
-      <summary>Thème détecté sur ce site ({themeVariables.length})</summary>
+      <summary>{t('themeVars.summary', { count: themeVariables.length })}</summary>
       {themeVariables.length > 0 && (
         <input
           type="text"
           className="devwind-theme-vars__filter"
-          placeholder="Filtrer (ex. color-red, radius)…"
+          placeholder={t('themeVars.filter')}
+          aria-label={t('themeVars.filterLabel')}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
@@ -47,17 +42,15 @@ export default function ThemeVariablesSection() {
             key={v.name}
             type="button"
             className="devwind-theme-vars__row"
-            title={`Copier var(${v.name})`}
-            onClick={() => void copyVar(v.name)}
+            title={t('themeVars.copyTitle', { name: v.name })}
+            onClick={() => void copy(`var(${v.name})`, v.name)}
           >
-            {v.name.startsWith('--color-') && <span className="devwind-value__swatch" style={{ background: v.value }} />}
+            {v.name.includes('-color-') && <span className="devwind-value__swatch" aria-hidden="true" style={{ background: v.value }} />}
             <span className="devwind-theme-vars__name">{v.name}</span>
-            <span className="devwind-theme-vars__value">{copiedName === v.name ? 'copié !' : v.value}</span>
+            <span className="devwind-theme-vars__value">{copiedName === v.name ? t('themeVars.copied') : v.value}</span>
           </button>
         ))}
-        {themeVariables.length === 0 && (
-          <p className="devwind-empty">Aucune variable de thème v4 détectée (le site n'utilise peut-être pas Tailwind v4, ou son thème n'est pas exposé en variables CSS).</p>
-        )}
+        {themeVariables.length === 0 && <p className="devwind-empty">{t('themeVars.empty')}</p>}
       </div>
     </details>
   )
