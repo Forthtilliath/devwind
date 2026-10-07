@@ -32,7 +32,7 @@ const THEME_VAR_NAMESPACES = [
  * `getComputedStyle` sur `documentElement` est indexable comme un tableau, ses entrées couvrant
  * aussi les custom properties : pas besoin de parser les feuilles de style pour les trouver.
  *
- * `sitePrefix` (option `prefix` de Tailwind v4, cf. `detectSitePrefix`) : si détecté, les noms
+ * `sitePrefix` (option `prefix` de Tailwind v4, cf. `pickSitePrefix`) : si détecté, les noms
  * de variables du site sont eux-mêmes préfixés (`--tw-color-red-500` au lieu de
  * `--color-red-500`, vérifié avec `@tailwindcss/cli --prefix`) — sans ce paramètre, aucune
  * variable ne matcherait jamais sur un site préfixé.
