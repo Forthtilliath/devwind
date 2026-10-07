@@ -16,6 +16,11 @@
       .my-custom-btn {
         border: 2px dashed rebeccapurple;
       }
+      /* Breakpoint personnalisé (comme `@theme { --breakpoint-sm: 30rem }`) : lu par le panneau
+         dans les media queries, Tailwind v4 n'émettant pas la variable elle-même. */
+      @media (width >= 30rem) {
+        .sm\:underline { text-decoration: underline; }
+      }
     </style>
   </head>
   <body>
@@ -24,9 +29,16 @@
 
     <!-- `after:`/`before:` sont de VRAIS variants Tailwind (pseudo-éléments), pas un préfixe de
          site : 3+ occurrences ne doivent PAS déclencher la détection heuristique de préfixe
-         (detectSitePrefix dans css-scanner.ts) — régression couverte par un test dédié. -->
+         (collectPrefixCandidates / pickSitePrefix) — régression couverte par un test dédié. -->
     <div id="after-a" class="after:absolute">après A</div>
     <div id="after-b" class="after:absolute">après B</div>
     <div id="after-c" class="after:absolute">après C</div>
+
+    <!-- Contraste : texte translucide (blanc à 50 %) sur fond noir hérité d'un ancêtre → gris
+         ~rgb(128,128,128) réellement affiché, et non du blanc pur (21:1). -->
+    <div style="background-color: rgb(0, 0, 0)">
+      <p id="translucent-text" style="color: rgba(255, 255, 255, 0.5)">Texte translucide.</p>
+    </div>
+    <p id="gradient-text" style="background-image: linear-gradient(red, blue); color: #000">Texte sur dégradé.</p>
   </body>
 </html>
