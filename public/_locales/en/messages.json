@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "DevWind",
+    "description": "Extension name."
+  },
+  "extDescription": {
+    "message": "Visual Tailwind CSS class editor, live in the browser.",
+    "description": "Extension description (Chrome and the Chrome Web Store)."
+  },
+  "commandToggle": {
+    "message": "Open/close the DevWind panel",
+    "description": "Keyboard shortcut description."
+  }
+}
