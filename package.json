@@ -1,7 +1,7 @@
 {
   "name": "devwind",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Extension Chrome pour éditer visuellement les classes Tailwind CSS v4 en direct sur n'importe quel site.",
   "type": "module",
   "author": "Forthtilliath",
